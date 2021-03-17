@@ -138,29 +138,6 @@ In this case you would set something like this into your config.inc.php file:
 You may combine modules to implement a cascade authentication system. See [auth/local-auth.inc.php](auth/local-auth.inc.php) as an example.
 
 
-## License
-
-ReBooth is available under the [GNU Affero General Public v3](https://www.gnu.org/licenses/agpl-3.0.html) License. 
-
-In brief, this program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as  published by the Free Software Foundation, either version 3 of the  License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful, but **WITHOUT ANY WARRANTY**; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the [GNU Affero General Public License](https://www.gnu.org/licenses/agpl-3.0.html) for more details.
-
-Documentation is available under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) license. 
-
-ReBooth uses several third-party frameworks, components, libraries and resources:
-* [PeerJS](https://peerjs.com/">https://peerjs.com/)
-* [JQuery](https://jquery.com/">https://jquery.com/)
-* [Bootstrap 4](https://getbootstrap.com/)
-* [BootBox JS](http://bootboxjs.com/)
-* [JsZip](https://stuk.github.io/jszip/)
-* [Moment JS](https://momentjs.com/)
-* [Animate.css](https://github.com/animate-css/animate.css)
-* [FontAwesome](https://fontawesome.com/)
-* [Code snippets from WebRTC Samples](https://webrtc.github.io/samples/)
-* [PHP Mailer](https://github.com/PHPMailer/PHPMailer)
-
-
 ## Appendix I
 
 This is an example setup for a PeerJS server proxyed by an Apache virtual host on an Ubuntu system where we're logged as the unprivileged user pippo.
@@ -270,3 +247,27 @@ This way we can start/stop our PeerJS server with systemctl as any other server:
 [pippo@localhost ~]$ sudo systemctl enable peerjs-server
 ```
 Anything in this appendix could be done much better. This is just a quick guied.
+
+
+## License
+
+ReBooth is available under the [GNU Affero General Public v3](https://www.gnu.org/licenses/agpl-3.0.html) License. 
+
+In brief, this program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as  published by the Free Software Foundation, either version 3 of the  License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but **WITHOUT ANY WARRANTY**; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the [GNU Affero General Public License](https://www.gnu.org/licenses/agpl-3.0.html) for more details.
+
+Documentation is available under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) license. 
+
+ReBooth uses several third-party frameworks, components, libraries and resources:
+* [PeerJS](https://peerjs.com/">https://peerjs.com/)
+* [JQuery](https://jquery.com/">https://jquery.com/)
+* [Bootstrap 4](https://getbootstrap.com/)
+* [BootBox JS](http://bootboxjs.com/)
+* [JsZip](https://stuk.github.io/jszip/)
+* [Moment JS](https://momentjs.com/)
+* [Animate.css](https://github.com/animate-css/animate.css)
+* [FontAwesome](https://fontawesome.com/)
+* [Code snippets from WebRTC Samples](https://webrtc.github.io/samples/)
+* [PHP Mailer](https://github.com/PHPMailer/PHPMailer)
+
