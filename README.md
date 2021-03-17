@@ -56,6 +56,11 @@ Then configure your web server so that it will serve your rebooth webroot direct
 URL rewriting must be also enabled so that the extension for php scripts and html pages is removed. See [.htaccess](.htaccess) file.
 
 
+## Upgrading
+
+Basically you need to get the new version of ReBooth from GitHub and replace everything on your webroot except your configuration files (always check for additions or changes), authentication scripts, and any images you may have replaced or customized. Always make a backup copy of your webroot before trying an upgrade.
+
+
 ## Configuration and authentication module
 
 There are two configuration files you have to set up:
