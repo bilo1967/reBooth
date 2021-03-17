@@ -58,7 +58,7 @@ URL rewriting must be also enabled so that the extension for php scripts and htm
 
 ## Upgrading
 
-Basically you need to get the new version of ReBooth from GitHub and replace everything on your webroot except your configuration files (always check for additions or changes), authentication scripts, and any images you may have replaced or customized. Always make a backup copy of your webroot before trying an upgrade.
+Basically you need to get the new version of ReBooth from GitHub (just do a ```git clone https://github.com/bilo1967/rebooth.git``` in a temporary directory) and replace everything on your webroot except your configuration files (always check for additions or changes), authentication scripts, and any images you may have replaced or customized. Always make a backup copy of your webroot before trying an upgrade.
 
 
 ## Configuration and authentication module
