@@ -176,9 +176,7 @@ First of all we install and run the PeerJS server listening on localhost at port
 [pippo@localhost ~]$ node node_modules/peer/bin/peerjs --port 9000 --key peerjs --path / --proxied
 Started PeerServer on ::, port: 9000, path: / (v. 0.6.1)
 ```
-Now we need to configure an apache virtual host. 
-This is our /etc/apache2/sites-available/mypeerjs.host.tld-le-ssl.conf file, enabling a virtual host for mypeerjs.host.tld on our web server. We have a valid SSL certificate obtained via letsencrypt.
-
+Now we need to configure an apache virtual host. This is our /etc/apache2/sites-available/mypeerjs.host.tld-le-ssl.conf file, enabling a virtual host for mypeerjs.host.tld on our web server. We also have a valid SSL certificate obtained via letsencrypt.
 ```apache
 <IfModule mod_ssl.c>
 <VirtualHost *:443>
@@ -207,6 +205,21 @@ This is our /etc/apache2/sites-available/mypeerjs.host.tld-le-ssl.conf file, ena
 </VirtualHost>
 </IfModule>
 ```
+Once we've created this file we enable the needed apache modules, we enable the site and then reload apache.
+```bash
+[pippo@localhost ~]$ sudo a2enmod proxy
+[pippo@localhost ~]$ sudo a2enmod proxy_http
+[pippo@localhost ~]$ sudo a2enmod proxy_wstunnel
+[pippo@localhost ~]$ sudo a2ensite mypeerjs.host.tld
+[pippo@localhost ~]$ sudo systemctl reload apache2
+```
+The PeerJS server should now respond on standard port 443:
+```bash
+[pippo@localhost ~]$ wget -O /tmp/out.json https://mypeerjs.host.tld
+[pippo@localhost ~]$  cat /tmp/out.json
+{"name":"PeerJS Server","description":"A server side element to broker connections between PeerJS clients.","website":"https://peerjs.com/"}
+```
 
 
+```
 
