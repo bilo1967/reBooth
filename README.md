@@ -19,7 +19,7 @@ To reduce the risk of compromising student activity, ReBooth:
 
 ## Prerequisites
 
-- A working [PeerJS server](https://github.com/peers/peerjs-server).
+- A working [PeerJS server](https://github.com/peers/peerjs-server). See Appendix I for a hint.
 - One or more STUN servers; you may use a free existing one or setup your own (e.g. [CoTURN](https://github.com/coturn/coturn)).
 - One or more TURN servers; you may buy access to an existing one or set up your own (e.g. [CoTURN](https://github.com/coturn/coturn)). You may try without a TURN server but users behind a symmetrical NAT won't be able to use ReBooth.
 - A web server supporting PHP (≥ 5.5), HTTPS and URL rewriting to host your ReBooth installation. Here I refer to Apache but any other modern web server should be fine.
@@ -163,11 +163,10 @@ ReBooth uses several third-party frameworks, components, libraries and resources
 
 ## Appendix I
 
-This is an example quick start setup for a PeerJS server proxyed by an Apache virtual host on an Ubuntu system where we're logged as the unprivileged user pippo.
-We suppose we have a valid DNS host mypeerjs.host.tld for our peerjs server.
+This is an example setup for a PeerJS server proxyed by an Apache virtual host on an Ubuntu system where we're logged as the unprivileged user pippo.
+Both PeerJS server and Apache are running on the same server. We suppose we have a valid DNS host mypeerjs.host.tld for our peerjs server.
 
-First of all we install and run the PeerJS server listening on localhost at port 9000
-
+First of all we install and (manually) run the PeerJS server listening on localhost at port 9000
 ```bash
 [pippo@localhost ~]$ sudo mkdir /opt/peerjs-server
 [pippo@localhost ~]$ chown pippo /opt/peerjs-server 
@@ -192,11 +191,11 @@ Now we need to configure an apache virtual host. This is our /etc/apache2/sites-
   RewriteCond %{HTTP:Upgrade} !=websocket [NC]
   RewriteRule /(.*)           http://localhost:9000/$1 [P,L]
 
-  ProxyPass "/" "http://localhost:9000/"
-  ProxyPassReverse "/" "http://localhost:9000/"
+# ProxyPass "/" "http://localhost:9000/"
+# ProxyPassReverse "/" "http://localhost:9000/"
 
-  ProxyPass "/chatHub" "ws://localhost:9000/peerjs"
-  ProxyPassReverse "/chatHub" "ws://localhost:9000/peerjs"
+# ProxyPass "/" "ws://localhost:9000/peerjs"
+# ProxyPassReverse "/" "ws://localhost:9000/peerjs"
 
   SSLCertificateFile /etc/letsencrypt/live/mypeerjs.host.tld/fullchain.pem
   SSLCertificateKeyFile /etc/letsencrypt/live/mypeerjs.host.tld/privkey.pem
@@ -213,16 +212,32 @@ Once we've created this file we enable the needed apache modules, we enable the 
 [pippo@localhost ~]$ sudo a2ensite mypeerjs.host.tld
 [pippo@localhost ~]$ sudo systemctl reload apache2
 ```
-The PeerJS server should now respond on standard port 443:
+The PeerJS server should now respond on standard port 443.
 ```bash
 [pippo@localhost ~]$ wget -O /tmp/out.json https://mypeerjs.host.tld
-[pippo@localhost ~]$  cat /tmp/out.json
+[pippo@localhost ~]$ cat /tmp/out.json
 {
   "name":"PeerJS Server",
   "description":"A server side element to broker connections between PeerJS clients.",
   "website":"https://peerjs.com/"
 }
 ```
-End.
+Now we can modify our [config/config.js](config/config.js) file to use our PeeJS server...
+
+```javascript
+...
+// DITLab server
+const PeerJSConfig = {
+    secure: true,
+    path: '/',
+    host: 'mypeerjs.host.tld',
+    port: 443, // <= TCP
+    config: {
+        'iceServers': [
+            { urls: 'stun:stun.l.google.com:19302'  }, // <= UDP
+            ...
+```
+Note that we've started the PeerJS server instance manually. In a production environment we should create a startup script to load it automatically at system start.
+
 
 
