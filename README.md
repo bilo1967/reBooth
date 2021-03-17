@@ -246,7 +246,7 @@ This way we can start/stop our PeerJS server with systemctl as any other server:
 [pippo@localhost ~]$ # Enable server at system startup
 [pippo@localhost ~]$ sudo systemctl enable peerjs-server
 ```
-Anything in this appendix could be done much better. This is just a quick guied.
+Anything in this appendix could be done much better. This is just a quick start guide for a PeerJS server.
 
 
 ## License
