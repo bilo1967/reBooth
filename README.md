@@ -237,7 +237,7 @@ const PeerJSConfig = {
             { urls: 'stun:stun.l.google.com:19302'  }, // <= UDP
             ...
 ```
-Note that we've started the PeerJS server instance manually. In a production environment we should create a startup script to load it automatically at system start. For example, we could create a `/lib/systemd/system/peerjs-server.service` file with these contents
+Note that we've started the PeerJS server instance manually. In a production environment we should create a startup script to load it automatically at system start. For example, we could create the following `/lib/systemd/system/peerjs-server.service` file:
 ```ini
 [Unit]
 Description=PeerJS Server
@@ -258,6 +258,15 @@ KillSignal=SIGKILL
 [Install]
 WantedBy=multi-user.target
 ```
-
-
-
+This way we can start/stop our PeerJS server with systemctl as any other server:
+```bash
+[pippo@localhost ~]$ # Start server
+[pippo@localhost ~]$ sudo systemctl start peerjs-server
+[pippo@localhost ~]$ # Watch server status
+[pippo@localhost ~]$ sudo systemctl status peerjs-server
+[pippo@localhost ~]$ # Stop server
+[pippo@localhost ~]$ sudo systemctl stop peerjs-server
+[pippo@localhost ~]$ # Enable server at system startup
+[pippo@localhost ~]$ sudo systemctl enable peerjs-server
+```
+Anything in this appendix could be done much better. This is just a quick guied.
