@@ -37,6 +37,7 @@ You can find plenty of free STUN servers. Google provides at least a dozen for f
 
 If you setup your own STUN, TURN or PeerJS server, be sure that their ports are not blocked by your firewall for inbound connections (expecially PeerJS which may not use a standard port). Also, verify that you can access those ports from your location.
 
+Once you have your working PeerJS server and access to at least a TURN and a TURN server, you can download the ReBooth webroot from GitHub, set up the configuration files and have your ReBooth installation served by a webserver.
 
 ## Installation
 
@@ -158,4 +159,54 @@ ReBooth uses several third-party frameworks, components, libraries and resources
 * [FontAwesome](https://fontawesome.com/)
 * [Code snippets from WebRTC Samples](https://webrtc.github.io/samples/)
 * [PHP Mailer](https://github.com/PHPMailer/PHPMailer)
+
+
+## Appendix I
+
+This is an example quick start setup for a PeerJS server proxyed by an Apache virtual host on an Ubuntu system where we're logged as the unprivileged user pippo.
+We suppose we have a valid DNS host mypeerjs.host.tld for our peerjs server.
+
+First of all we install and run the PeerJS server listening on localhost at port 9000
+
+```bash
+[pippo@localhost ~]$ sudo mkdir /opt/peerjs-server
+[pippo@localhost ~]$ chown pippo /opt/peerjs-server 
+[pippo@localhost ~]$ cd /opt/peerjs-server
+[pippo@localhost ~]$ npm install peer
+[pippo@localhost ~]$ node node_modules/peer/bin/peerjs --port 9000 --key peerjs --path / --proxied
+Started PeerServer on ::, port: 9000, path: / (v. 0.6.1)
+```
+Now we need to configure an apache virtual host. 
+This is our /etc/apache2/sites-available/mypeerjs.host.tld-le-ssl.conf file, enabling a virtual host for mypeerjs.host.tld on our web server. We have a valid SSL certificate obtained via letsencrypt.
+
+```apache
+<IfModule mod_ssl.c>
+<VirtualHost *:443>
+  ServerName mypeerjs.host.tld
+
+  ProxyPreserveHost On
+  ProxyRequests Off
+
+  # allow for upgrading to websockets
+  RewriteEngine On
+  RewriteCond %{HTTP:Upgrade} =websocket [NC]
+  RewriteRule /(.*)           ws://localhost:9000/$1 [P,L]
+  RewriteCond %{HTTP:Upgrade} !=websocket [NC]
+  RewriteRule /(.*)           http://localhost:9000/$1 [P,L]
+
+  ProxyPass "/" "http://localhost:9000/"
+  ProxyPassReverse "/" "http://localhost:9000/"
+
+  ProxyPass "/chatHub" "ws://localhost:9000/peerjs"
+  ProxyPassReverse "/chatHub" "ws://localhost:9000/peerjs"
+
+  SSLCertificateFile /etc/letsencrypt/live/mypeerjs.host.tld/fullchain.pem
+  SSLCertificateKeyFile /etc/letsencrypt/live/mypeerjs.host.tld/privkey.pem
+  Include /etc/letsencrypt/options-ssl-apache.conf
+  
+</VirtualHost>
+</IfModule>
+```
+
+
 
