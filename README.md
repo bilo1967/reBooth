@@ -237,7 +237,27 @@ const PeerJSConfig = {
             { urls: 'stun:stun.l.google.com:19302'  }, // <= UDP
             ...
 ```
-Note that we've started the PeerJS server instance manually. In a production environment we should create a startup script to load it automatically at system start.
+Note that we've started the PeerJS server instance manually. In a production environment we should create a startup script to load it automatically at system start. For example, we could create a `/lib/systemd/system/peerjs-server.service` file with these contents
+```ini
+[Unit]
+Description=PeerJS Server
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+ExecStart=/usr/bin/node /opt/peerjs-server/node_modules/peer/bin/peerjs \
+                        --timeout 2500 \
+                        --port 9000 \
+                        --key peerjs \
+                        --path / \
+                        --proxied
+Restart=on-failure
+KillSignal=SIGKILL
+
+[Install]
+WantedBy=multi-user.target
+```
 
 
 
