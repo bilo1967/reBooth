@@ -217,9 +217,12 @@ The PeerJS server should now respond on standard port 443:
 ```bash
 [pippo@localhost ~]$ wget -O /tmp/out.json https://mypeerjs.host.tld
 [pippo@localhost ~]$  cat /tmp/out.json
-{"name":"PeerJS Server","description":"A server side element to broker connections between PeerJS clients.","website":"https://peerjs.com/"}
+{
+  "name":"PeerJS Server",
+  "description":"A server side element to broker connections between PeerJS clients.",
+  "website":"https://peerjs.com/"
+}
 ```
+End.
 
-
-```
 
