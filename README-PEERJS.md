@@ -1,5 +1,9 @@
 # How to setup a PeerJS server
 
+You can setup your own PeerJS server, use an existing one or create a free test instance on some cloud services.
+
+## Setup your own PeerJS server
+
 Since PeerJS is not very efficient in handling encrypted connections, we want to handle SSL with Apache and route the wss traffic to our local PeerJS server listening for unencrypted ws on a TCP port (9000 in our example). This is an example setup for a PeerJS server (listening on localhost at port 9000) proxyed by an Apache virtual host handling SSL on an Ubuntu system where we're logged as the unprivileged user pippo. Both PeerJS server and Apache are running on the same server. We suppose we have a valid DNS host mypeerjs.host.tld for our peerjs server.
 
 First of all we install and (manually) run the PeerJS server listening to ws protocol on localhost at port 9000
@@ -119,3 +123,24 @@ This way we can start/stop our PeerJS server with systemctl as any other server:
 [pippo@localhost ~]$ sudo systemctl enable peerjs-server
 ```
 Anything in this appendix could be done much better. This is just a quick start guide for a PeerJS server.
+
+
+
+## Use an existing PeerJS server or create a free test one on some cloud service
+
+You may try the default PeerJS server, hoping it's not overloaded or over-quota. Just leave secure, path, host, port keys empty for PeerJSConfig in your [config.js](/config/config.js) file:
+```js
+...
+const PeerJSConfig = {
+    config: {
+        iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' },
+            ...
+        }
+    }
+}
+
+```
+You can also easily create one using a free account on some cloud service, like Heroku. Just Google "deploy peerjs server on heroku" and follow the directions. Your peerjs server will be online in minutes (it will actually take longer to create the account than the server). I don't know what load you'll be able to handle for free, but it will definitely be good enough for a quick test.
