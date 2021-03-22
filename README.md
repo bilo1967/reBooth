@@ -140,8 +140,7 @@ You may combine modules to implement a cascade authentication system. See [auth/
 
 ## Appendix I
 
-This is an example setup for a PeerJS server proxyed by an Apache virtual host on an Ubuntu system where we're logged as the unprivileged user pippo.
-Both PeerJS server and Apache are running on the same server. We suppose we have a valid DNS host mypeerjs.host.tld for our peerjs server.
+Since PeerJS is not very efficient in handling encrypted connections, we want to handle SSL with Apache and route the wss traffic to our local PeerJS server listening for unencrypted ws on a TCP port (9000 in our example). This is an example setup for a PeerJS server (listening on localhost at port 9000) proxyed by an Apache virtual host handling SSL on an Ubuntu system where we're logged as the unprivileged user pippo. Both PeerJS server and Apache are running on the same server. We suppose we have a valid DNS host mypeerjs.host.tld for our peerjs server.
 
 First of all we install and (manually) run the PeerJS server listening on localhost at port 9000
 ```bash
@@ -152,11 +151,9 @@ First of all we install and (manually) run the PeerJS server listening on localh
 [pippo@localhost ~]$ node node_modules/peer/bin/peerjs --port 9000 --key peerjs --path / --proxied
 Started PeerServer on ::, port: 9000, path: / (v. 0.6.1)
 ```
-Now we need to configure an apache virtual host. This is our /etc/apache2/sites-available/mypeerjs.host.tld-le-ssl.conf file, enabling a virtual host for mypeerjs.host.tld on our web server. We also have a valid SSL certificate obtained via letsencrypt.
+Now we need to configure an apache virtual host. This is our /etc/apache2/sites-available/mypeerjs.host.tld-le-ssl.conf file, enabling a virtual host for mypeerjs.host.tld on our web server. We also have a valid SSL certificate obtained via letsencrypt (see [here](https://stackoverflow.com/questions/27526281/websockets-and-apache-proxy-how-to-configure-mod-proxy-wstunnel) for details about all the Apache mod_rewrite black magic).
 ```apache
 #
-# PeerJS it's not very efficient in handling encrypted connections. We wanto to proxy wss
-# requests, with SSL handled by Apache, to PeerJS server listening for unencrypted ws
 #
 <IfModule mod_ssl.c>
 <VirtualHost *:443>
