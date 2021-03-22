@@ -154,6 +154,10 @@ Started PeerServer on ::, port: 9000, path: / (v. 0.6.1)
 ```
 Now we need to configure an apache virtual host. This is our /etc/apache2/sites-available/mypeerjs.host.tld-le-ssl.conf file, enabling a virtual host for mypeerjs.host.tld on our web server. We also have a valid SSL certificate obtained via letsencrypt.
 ```apache
+#
+# PeerJS it's not very efficient in handling encrypted connections. We wanto to proxy wss
+# requests, with SSL handled by Apache, to PeerJS server listening for unencrypted ws
+#
 <IfModule mod_ssl.c>
 <VirtualHost *:443>
   ServerName mypeerjs.host.tld
@@ -161,16 +165,29 @@ Now we need to configure an apache virtual host. This is our /etc/apache2/sites-
   ProxyPreserveHost On
   ProxyRequests Off
 
-  # allow for upgrading to websockets
   RewriteEngine On
-  RewriteCond %{HTTP:Upgrade} =websocket [NC]
-  RewriteRule /(.*)           ws://localhost:9000/$1 [P,L]
+
+  # Allow for upgrading to websockets (should work for Apache >= v2.2)
+  #
+  # The HTTP upgrade header can be used to upgrade an already established client/server
+  # connection to a different protocol (over the same transport protocol). Here we want
+  # to upgrade to to the websocket protocol (ws).
+  #
+  # (Apache rewrite flags:  P=proxy, NC=no-case-sensitive, L=last rule)
+
+  # When socket.io wants to initiate a WebSocket connection, it sends an "upgrade: websocket"
+  # request header that should be transferred to ws:// which will be handled by the PeerJS
+  # server which is listening on port 9000 (or whatever you've set).
+  RewriteCond %{HTTP:Upgrade} =websocket               [NC]
+  RewriteRule /(.*)           ws://localhost:9000/$1   [P,L]
+
+  # Quick and dirty: route anything else to port 9000 using HTTP
   RewriteCond %{HTTP:Upgrade} !=websocket [NC]
   RewriteRule /(.*)           http://localhost:9000/$1 [P,L]
 
+  # Optional: route all traffic at / to port 9000
 # ProxyPass "/" "http://localhost:9000/"
 # ProxyPassReverse "/" "http://localhost:9000/"
-
 # ProxyPass "/" "ws://localhost:9000/peerjs"
 # ProxyPassReverse "/" "ws://localhost:9000/peerjs"
 
