@@ -27,7 +27,10 @@ To reduce the risk of compromising student activity, ReBooth:
 - A SMTP server to send invitations (optional but recommended  ).
 - A PHP authentication script to restrict access only to users allowed by your organization: you'll likely have to write your own.
 
-The PeerJS server setting is mandatory. The PeerJS server is used to keep track of active connections. It generates very low network traffic and workload for your server. The authors of PeerJS offer free access to theirs, but many people use it and you may find it busy. You may have to set up your own ([https://github.com/peers/peerjs-server](https://github.com/peers/peerjs-server)). 
+
+Having a [PeerJS server](https://github.com/peers/peerjs-server) is mandatory. The PeerJS server lets users find each other by keeping track of their connections. It basically just stores usernames and IP addresses of connected users. 
+No peer-to-peer data is routed through the server, which acts only as a connection broker. Therefore it generates very low network traffic and workload for your hardware and infrastructure.
+The authors of PeerJS offer free access to their PeerJS server, but many people use it and you may find it busy and you'll likely need to deploy your own (see [README-PEERJS.md](/README-PEERJS.md) for a quick start guide).
 
 STUN, TURN (and ICE) are a set of IETF standard protocols for negotiating traversing NATs when establishing peer-to-peer communication sessions. WebRTC and other VoIP stacks implement support for ICE to improve the reliability of IP communications. The PeerJS library used by ReBooth makes it's ICE (Interactive Connectivity Establishment) implementation by coordinating STUN and TURN to make a connection between hosts. A host uses Session Traversal Utilities for NAT (STUN) to discover its public IP address when it is located behind a NAT/Firewall. When this host wants to receive an incoming connection from another party, it provides this public IP address as a possible location where it can receive a connection. If the NAT/Firewall still won't allow the two hosts to connect directly, they make a connection to a server implementing Traversal Using Relay around NAT (TURN), which will relay media between the two parties. 
 
