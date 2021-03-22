@@ -151,7 +151,7 @@ First of all we install and (manually) run the PeerJS server listening to ws pro
 [pippo@localhost ~]$ node node_modules/peer/bin/peerjs --port 9000 --key peerjs --path / --proxied
 Started PeerServer on ::, port: 9000, path: / (v. 0.6.1)
 ```
-Now we need to configure an apache virtual host. This is our /etc/apache2/sites-available/mypeerjs.host.tld-le-ssl.conf file, enabling a virtual host for mypeerjs.host.tld on our web server. We also have a valid SSL certificate obtained via letsencrypt (see [here](https://stackoverflow.com/questions/27526281/websockets-and-apache-proxy-how-to-configure-mod-proxy-wstunnel) for details about all the Apache mod_rewrite black magic).
+Now we need to configure an apache virtual host. This is our /etc/apache2/sites-available/mypeerjs.host.tld-le-ssl.conf file, enabling a virtual host for mypeerjs.host.tld on our web server. See [here](https://stackoverflow.com/questions/27526281/websockets-and-apache-proxy-how-to-configure-mod-proxy-wstunnel) for details about the Apache mod_rewrite black magic. We also have a valid SSL certificate obtained via letsencrypt.
 ```apache
 <IfModule mod_ssl.c>
 <VirtualHost *:443>
