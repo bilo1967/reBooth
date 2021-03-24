@@ -21,7 +21,7 @@ To reduce the risk of compromising student activity, ReBooth:
 
 - A working [PeerJS server](https://github.com/peers/peerjs-server). See [README-PEERJS.md](/README-PEERJS.md) for a hint.
 - One or more STUN servers; you may use a free existing one or setup your own (e.g. [CoTURN](https://github.com/coturn/coturn)).
-- One or more TURN servers; you may buy access to an existing one or set up your own (e.g. [CoTURN](https://github.com/coturn/coturn)). You may try without a TURN server but users behind a symmetrical NAT won't be able to use ReBooth.
+- One or more TURN servers; you may buy access to an existing one or set up your own (e.g. [CoTURN](https://github.com/coturn/coturn)). You may try without a TURN server but users behind a symmetrical NAT (and in general depending on their router and firewall setup) won't be able to use ReBooth.
 - A web server supporting PHP (≥ 5.5), HTTPS and URL rewriting to host your ReBooth installation. Here I refer to Apache but any other modern web server should be fine.
 - A writeable directory on this server to store recordings and temporary data.
 - A SMTP server to send invitations (optional but recommended  ).
@@ -96,7 +96,9 @@ const PeerJSConfig = {
     },
 };
 ```
- At the moment you can leave any other setting as is.
+At the moment you can leave any other setting as is.
+
+In the provided configuration file there are public STUN servers but no TURN server so, depending on user's router and firewall setup, it might not always be possible to connect to ReBooth.
 
 
 ### config.inc.php
