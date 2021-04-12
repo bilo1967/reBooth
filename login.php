@@ -96,6 +96,10 @@ if (@$_SESSION['login']) {
 <head>
   <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
   
+  <meta name="description" content="ReBooth (REmote BOOTH) is a WebRTC based platform for conference interpreter training">
+  
+  <title>ReBooth:login</title>
+  
   <!-- favicon for all devices -->
   <link rel="apple-touch-icon" sizes="180x180" href="/images/icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/images/icons/favicon-32x32.png">
@@ -103,9 +107,6 @@ if (@$_SESSION['login']) {
   <link rel="manifest" href="/images/icons/site.webmanifest">
   <link rel="mask-icon" href="/images/icons/safari-pinned-tab.svg" color="#5bbad5">
   <link rel="shortcut icon" href="/images/icons/favicon.ico">
-
-  
-  <title>ReBooth:login</title>
 
   
   <script src="https://kit.fontawesome.com/ea65ac0a48.js"></script>
@@ -127,7 +128,8 @@ if (@$_SESSION['login']) {
 
   <link rel="stylesheet" href="css/rebooth.css?v0.1">
   
-  <script src="config/config.js?0.01"></script>  
+  <script src="config/config.js?0.01"></script> 
+  <script src="js/rebooth.js?0.00"></script>
 
 
 <!-- Stili locali -->
@@ -136,11 +138,17 @@ body {
     background-image: url("images/logo.png");
     background-repeat: no-repeat;
 }
+.credits {
+    font-size: 0.8rem;
+    font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji";    
+}
 </style>
 
 <!-- Script locali -->
 <script>
 $(document).ready(function(){
+    $('#version').html('[ ' + AppName + ' v' + AppVersion + ' &dash; clone it from <a target="_blank" href="' + AppGitHub + '">GitHub</a> ]');
+    $('#author').html("By " + AppAuthorShort + " and " + AppContributorsShort + " &dash; " + AppCompanyShort + ' &#128073; <a href="/credits">credits</a>');
 });
 </script>
 
@@ -152,54 +160,60 @@ $(document).ready(function(){
 <div class="container">
 
 
-<div class="display-3 text-center">ReBooth</div>
-
-<br/>
-
-<div class="row">
-  <div class="col-sm-3"></div>
-  <div class="mx-auto col-sm-6 border rounded border-primary p-4" style="background: rgb(255,255,255)">
-    <h3 class="" style="text-align: center">Login</h3>
+  <div class="display-3 text-center">ReBooth</div>
+  
+  <br/>
+  
+  <div class="row">
+    <div class="col-sm-3"></div>
+    
+    <div class="mx-auto col-sm-6 border rounded border-primary p-4 bg-clear">
+      <h3 class="" style="text-align: center">Login</h3>
 <?php
   if ($errMsg != '') {
     echo '<br/><div class="mx-auto alert alert-danger">' . $errMsg . '</div>';
   }
 ?>
-    <form action="" method="post">
-      <legend><?=$CONFIG['auth_description']?></legend>
-      <div class="form-group">
-        <label for="user">User name:</label>
-        <input type="text" class="form-control" name="user" placeholder="<?=$CONFIG['auth_username_placeholder']?>">
-      </div>
-      <div class="form-group">
-        <label for="pass">Password:</label>
-        <input type="password" class="form-control" id="pass" name="pass" placeholder="<?=$CONFIG['auth_password_placeholder']?>">
-      </div>
-      
+      <form action="" method="post">
+        <legend><?=$CONFIG['auth_description']?></legend>
+        <div class="form-group">
+          <label for="user">User name:</label>
+          <input type="text" class="form-control" name="user" placeholder="<?=$CONFIG['auth_username_placeholder']?>">
+        </div>
+        <div class="form-group">
+          <label for="pass">Password:</label>
+          <input type="password" class="form-control" id="pass" name="pass" placeholder="<?=$CONFIG['auth_password_placeholder']?>">
+        </div>
+        
 <?php 
     if ($CONFIG['google_recaptcha']) {
 ?>
-      <div class="row">
-      <div class=" mx-auto g-recaptcha" data-sitekey="<?=$CONFIG['google_recaptcha_site_key']?>"></div>   
-      </div>
+        <div class="row">
+          <div class=" mx-auto g-recaptcha" data-sitekey="<?=$CONFIG['google_recaptcha_site_key']?>"></div>   
+        </div>
 <?php
     };
 ?>      
-      <br/>
-      <div  style="text-align: center">
-      <input type="submit" name="login" id="login" class="mx-auto btn btn-primary" value="Login">
-      </div>
-    </form>
-  </div>
-  <div class="col-sm-3"></div>
-</div>
+        <br/>
+        <div  style="text-align: center">
+          <input type="submit" name="login" id="login" class="mx-auto btn btn-primary" value="Login">
+        </div>
+      </form>
 
+    </div>
+    
+    <div class="col-sm-3"></div>
+    
+  </div>
+
+  <div style="position: absolute; bottom: 2; left:2; right:2; width: vw" class="d-flex justify-content-between">
+    <div id="version" class="credits"></div>
+    <div id="author" class="credits"></div>
+  </div>
 </div>
 
 <br/>
 </body>
 </html>
 <?php
-
-
 ?>

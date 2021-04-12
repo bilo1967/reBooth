@@ -335,6 +335,21 @@ $(document).ready(function() {
             }
         });
 
+
+
+
+
+
+
+
+
+
+
+
+        
+        
+        
+        
         me.value = null; // Otherwise you can't load the same file more times
         
     });
@@ -437,10 +452,8 @@ $(document).ready(function() {
               <div class="col-md-5">
                 <button id="start-class-no-invitations" class="btn btn-success disabled w-100">Just load the class</button>
               </div>
-            </div>    
-
               
-              
+            </div>            
             
           </div>
 

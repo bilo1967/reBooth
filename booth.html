@@ -1,6 +1,10 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en">
 <head>
   <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+
+  <meta name="description" content="ReBooth (REmote BOOTH) is a WebRTC based platform for conference interpreter training">
+
+  <title>ReBooth:booth</title>
   
   <!-- favicon for all devices -->
   <link rel="apple-touch-icon" sizes="180x180" href="/images/icons/apple-touch-icon.png">
@@ -10,8 +14,6 @@
   <link rel="mask-icon" href="/images/icons/safari-pinned-tab.svg" color="#5bbad5">
   <link rel="shortcut icon" href="/images/icons/favicon.ico">
 
-  
-  <title>ReBooth</title>
   
   <!--script src="https://kit.fontawesome.com/ea65ac0a48.js"></script-->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/css/all.min.css" integrity="sha256-h20CPZ0QyXlBuAw7A+KluUYx/3pK+c7lYEpqLTlxjYQ=" crossorigin="anonymous" />
@@ -131,7 +133,24 @@ var recordingCounter  = 1;
 
 
 // Audio context
-//var audioCtx = null;
+var audioCtx = null;
+var playerGain = null;
+var teacherGain = null;
+var playerSource = null;
+var teacherSource = null;
+var audioDestinationElement = null;
+var audioDestinationNode = null;
+
+
+
+
+
+
+
+
+
+
+
 
 
 function loadClock() {
@@ -181,15 +200,45 @@ $(document).ready(function() {
 
     bootbox.alert({
         centerVertical: true,
-        title: "Welcome to "+AppName+ " v"+AppVersion + "<br><span style='font-size: 0.55rem'>"  +
-               "designed and developed by " + AppAuthor + " with the help of " + AppContributors + "<br/>" +
-               "for the " + AppCompany + "</span>",        
+        title: "Welcome to "+AppName+ " v"+AppVersion,
         message: "You can join the class by pressing the 'Join' button only after the teacher has started it.",
         callback: () => {
             // Here we create objects needing an user gesture to be created
-            // Audio context
-            // audioCtx = new AudioContext();    
-        
+
+            // create an audio context and hook up the video/audio element as the source
+            
+            audioCtx = new AudioContext();
+            playerSource = audioCtx.createMediaElementSource($('#audio-player').get(0));
+            //teacherSource = audioCtx.createMediaElementSource($('#teacher-video').get(0));
+            
+            // create Player gain node
+            playerGain = audioCtx.createGain();
+            playerGain.gain.value = PlayerGainMax * $('#audio-player-volume').val(); 
+            playerSource.connect(playerGain);
+            
+            // create Teacher gain node
+            //teacherGain = audioCtx.createGain();
+            //teacherGain.gain.value = TeacherGainMax * $('#teacher-volume').val();
+            //teacherSource.connect(teacherGain);
+
+            // Since the Web Audio API does not allow to set a specific audio device
+            // as a destination, we first create a destination node that we will use
+            // it as a source for a dynamic audio element, for which we can set the
+            // sinkId to any device we wish.
+            audioDestinationNode = audioCtx.createMediaStreamDestination();
+            
+            // connect gain nodes to output destination
+            playerGain.connect(audioDestinationNode);
+            //teacherGain.connect(audioDestinationNode);
+            
+            // Create a dynamic <audio> element
+            audioDestinationElement = new Audio();
+            
+            // Our audio stream becomes the audioDestinationElement srcObject
+            audioDestinationElement.srcObject = audioDestinationNode.stream;
+            audioDestinationElement.play();
+            
+                        
         }
     });
 
@@ -657,8 +706,11 @@ $(document).ready(function() {
     });
     $('#select-audio-output').on('change', () => {
         Cookies.set('student-audio-output', $('#select-audio-output').val(), { expires: 365 });
+
         changeAudioDestination($('#teacher-video')[0]);
-        changeAudioDestination($('#audio-player')[0]);
+        //changeAudioDestination($('#audio-player')[0]);
+        changeAudioDestination(audioDestinationElement);
+        
     });
 
     
@@ -674,7 +726,8 @@ $(document).ready(function() {
         .then(() => {
             setUserMediaConstraints();  
             changeAudioDestination($('#teacher-video')[0]);
-            changeAudioDestination($('#audio-player')[0]);
+            //changeAudioDestination($('#audio-player')[0]);
+            changeAudioDestination(audioDestinationElement);
         })
         .catch(handleLocalMediaStreamError);
     
@@ -1205,11 +1258,15 @@ console.log(res);
     
     
     $('#audio-player-volume').on('input', function() {
-        $('#audio-player')[0].volume = $(this).val();
+    
+        playerGain.gain.setValueAtTime(PlayerGainMax * $(this).val(), audioCtx.currentTime);
+        // $('#audio-player').get(0).volume = $(this).val();
     });
 
     $('#teacher-volume').on('input', function() {
-        $('#teacher-video')[0].volume = $(this).val();
+        
+        //teacherGain.gain.setValueAtTime(TeacherGainMax * $(this).val(), audioCtx.currentTime);
+        $('#teacher-video').get(0).volume = $(this).val();
     });
     
 
