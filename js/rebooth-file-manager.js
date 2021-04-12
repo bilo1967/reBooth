@@ -221,14 +221,8 @@ $(document).ready(function() {
 
     });
     
-    $('#booth-volume').on('input', function() {
-        //boothsGain.gain.value = BoothsGainMax * $(this).val();
-        boothsGain.gain.setValueAtTime(BoothsGainMax * $(this).val(), audioCtx.currentTime);
-    });
-    
     $('#audio-player-volume').on('input', function() {
-        //$('#audio-player').get(0).volume = PlayerGainMax * $(this).val();
-        playerGain.gain.setValueAtTime(PlayerGainMax * $(this).val(), audioCtx.currentTime);
+        $('#audio-player')[0].volume = $(this).val();
     });
 
     $('#audio-player-play').on('click',  function() {

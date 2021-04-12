@@ -8,15 +8,11 @@
 // const isRelay = mediaConnection.peerConnection.currentLocalDescription.sdp.includes('typ relay');
 
 
-const AppName              = 'ReBooth';
-const AppVersion           = '0.6.3';
-const AppAuthor            = 'Gabriele Carioli';
-const AppContributors      = 'Nicoletta Spinolo';
-const AppCompany           = 'Department of Interpretation and Translation at the University of Bologna';
-const AppAuthorShort       = 'G. Carioli';
-const AppContributorsShort = 'N. Spinolo';
-const AppCompanyShort      = 'D.I.T. at the University of Bologna';
-const AppGitHub            = 'https://github.com/bilo1967/reBooth';
+const AppName         = 'ReBooth';
+const AppVersion      = '0.6.2';
+const AppAuthor       = 'Gabriele Carioli';
+const AppContributors = 'Nicoletta Spinolo';
+const AppCompany      = 'Department of Interpretation and Translation at the University of Bologna'
 
 
 var teacherVideoBW = 0; // Max video upstream bandwidth per connection
