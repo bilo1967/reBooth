@@ -10,9 +10,11 @@ const PinLength = 6;
 const SimultaneousBatchDefaultDelay = 15;
 const ConsecutiveBatchDefaultDelay  = 0;
 
-// These are just for the teacher
-const BoothsGain = 2; // Boost booths volume (1=100%)
-const PlayerGain = 1; // Boost player volume (1=100%)
+// Maximum gain values (1=100%)
+// WARNING: overboosting audio volume may cause damage to your hearing
+const BoothsGainMax  = 2.25; // Boost booths volume (instructor only)
+const PlayerGainMax  = 2.25; // Boost player volume (both instructor and booth)
+const TeacherGainMax = 1.00; // Boost teacher volume (unused)
 
 // Teacher PC has to handle several upstream and downstream connections
 // Tipically downstream band is larger than upstream so it make sense to
