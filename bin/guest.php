@@ -29,7 +29,7 @@
     if (isset($options['delete'])) $options['d'] = true;
     if (isset($options['list'])) $options['l'] = true;
 
-    $user =  isset($options['u']) ? $options['u'] : false;
+    $user =  isset($options['u']) ? strtolower($options['u']) : false;
     $pass =  isset($options['p']) ? $options['p'] : false;
     $expiry = isset($options['e']) ? time() + intval($options['e']) * 3600 * 24 : false;
     $delete = isset($options['d']);
