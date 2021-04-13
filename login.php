@@ -34,10 +34,11 @@ if (isset($_POST['login']) && !empty($_POST['login'])) {
     if ($you_are_not_a_robot) {
         include_once dirname(__FILE__) . "/auth/" . $CONFIG['auth_module'];
 
-
         $user = !empty(trim($_POST['user'])) ? trim($_POST['user']) : '';
         $pass = !empty(trim($_POST['pass'])) ? trim($_POST['pass']) : '';        
 
+        $user = strtolower($user); // usernames are case insensitive
+        
         $_SESSION['login'] = true; 
         $_SESSION['user']  = null;
         
