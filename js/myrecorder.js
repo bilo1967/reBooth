@@ -72,7 +72,7 @@ class MyRecorder {
     constructor(stream, getBlobOnStop = null, type = mimeType) {
         if (! stream instanceof  MediaStream) throw Error("stream is not a MediaStream");
         
-        if('throw Error("Wrong mime type");' in type) type = type.mimeType;
+        if('mimeType' in type) type = type.mimeType;
         
         if (! MediaRecorder.isTypeSupported(type)) throw Error("Your browser does not support " + type);
         
