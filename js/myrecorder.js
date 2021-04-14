@@ -1,12 +1,57 @@
 /*
-*   Cose da provare:
-*   caricare il MediaStream di una webcam in un tag video,
-*   usare un altro mediastream come fonte, 
+
+const mimeTypes = [
+      "video/webm",
+      "audio/webm",
+      "audio/wav",
+      "audio/mp3",
+      "video/webm\;codecs=vp8",
+      "video/webm\;codecs=daala",
+      "video/webm\;codecs=h264",
+      "audio/webm\;codecs=opus",
+      "video/mpeg",
+      "video/webm;codecs=vp8",
+      "video/webm;codecs=vp9",
+      "video/webm;codecs=vp8.0",
+      "video/webm;codecs=vp9.0",
+      "video/webm;codecs=h264",
+      "video/webm;codecs=H264",
+      "video/webm;codecs=avc1",
+      "video/webm;codecs=vp8,opus",
+      "video/WEBM;codecs=VP8,OPUS",
+      "video/webm;codecs=vp9,opus",
+      "video/webm;codecs=vp8,vp9,opus",
+      "video/webm;codecs=h264,opus",
+      "video/webm;codecs=h264,vp9,opus",
+      "video/x-matroska;codecs=avc1",
+      "audio/webm;codecs=opus",
+      "audio/basic",
+      "audio/ogg",
+      "audio/x-wav",
+      "audio/mpeg",
+      "audio/mp4",
+      "audio/amr",
+      "audio/flac",
+      "audio/3gpp",
+      "audio/3gpp2",
+      "audio/x-midi",
+      "audio/x-matroska",
+      "audio/aac",
+      "audio/mp2t",
+      "video/mpeg",
+      "video/mp4",
+      "video/quicktime",
+      "video/x-raw-yuv",
+      "video/ogg",
+      "video/3gpp",
+      "video/3gpp2",
+      "video/mp2t",
+      "video/avi",
+      "video/x-matroska",
+];
+
+
 */
-
-
-// const mimeType = { 'type' : 'audio/ogg; codecs=opus' } ; 
-
 
 // This should work always, either for Chrome and for Firefox
 // by default we get only audio
@@ -26,11 +71,15 @@ class MyRecorder {
     // return a promise with the recorded blob and an objectURL to download it
     constructor(stream, getBlobOnStop = null, type = mimeType) {
         if (! stream instanceof  MediaStream) throw Error("stream is not a MediaStream");
-        if(! 'mimeType' in type) throw Error("Wrong mime type");
+        
+        if('throw Error("Wrong mime type");' in type) type = type.mimeType;
+        
+        if (! MediaRecorder.isTypeSupported(type)) throw Error("Your browser does not support " + type);
+        
         if (getBlobOnStop != null && typeof getBlobOnStop !== 'function') throw Error("getBlobOnStop is not a function");
         
         this.getBlobOnStop = getBlobOnStop;
-        this.type = type;
+        this.type = { mimeType: type };
 
         // If audio only is required and the argument stream has a video track, 
         // we create another MediaStream getting only the first audio track.
