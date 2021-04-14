@@ -5,10 +5,6 @@ const mimeTypes = [
       "audio/webm",
       "audio/wav",
       "audio/mp3",
-      "video/webm\;codecs=vp8",
-      "video/webm\;codecs=daala",
-      "video/webm\;codecs=h264",
-      "audio/webm\;codecs=opus",
       "video/mpeg",
       "video/webm;codecs=vp8",
       "video/webm;codecs=vp9",
@@ -17,6 +13,7 @@ const mimeTypes = [
       "video/webm;codecs=h264",
       "video/webm;codecs=H264",
       "video/webm;codecs=avc1",
+      "video/webm;codecs=daala",
       "video/webm;codecs=vp8,opus",
       "video/WEBM;codecs=VP8,OPUS",
       "video/webm;codecs=vp9,opus",
@@ -49,7 +46,6 @@ const mimeTypes = [
       "video/avi",
       "video/x-matroska",
 ];
-
 
 */
 
