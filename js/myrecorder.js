@@ -49,8 +49,8 @@ const mimeTypes = [
 
 */
 
-// This should work always, either for Chrome and for Firefox
-// by default we get only audio
+// This should always work, either on Chrome and Firefox
+// By default we get only audio
 const defaultMIMEType = 'audio/webm';
 
 class MyRecorder {
