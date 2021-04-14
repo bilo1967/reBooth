@@ -55,7 +55,7 @@ const mimeTypes = [
 
 // This should work always, either for Chrome and for Firefox
 // by default we get only audio
-const mimeType = {mimeType: 'audio/webm'};
+const defaultMIMEType = 'audio/webm';
 
 class MyRecorder {
 
@@ -69,7 +69,7 @@ class MyRecorder {
     
     // if no getBlobOnStop callback is passed, then the stop() method will
     // return a promise with the recorded blob and an objectURL to download it
-    constructor(stream, getBlobOnStop = null, type = mimeType) {
+    constructor(stream, getBlobOnStop = null, type = defaultMIMEType) {
         if (! stream instanceof  MediaStream) throw Error("stream is not a MediaStream");
         
         if('mimeType' in type) type = type.mimeType;
