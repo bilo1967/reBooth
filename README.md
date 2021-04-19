@@ -28,7 +28,7 @@ To reduce the risk of compromising student activity, ReBooth:
 - A PHP authentication script to restrict access only to users allowed by your organization: you'll likely have to write your own.
 
 
-Having a [PeerJS server](https://github.com/peers/peerjs-server) is mandatory. The PeerJS server lets users find each other by keeping track of their connections. It basically just stores usernames and IP addresses of connected users. 
+Having a [PeerJS server](https://github.com/peers/peerjs-server) is mandatory. The PeerJS server lets users find each other by keeping track of their connections. It basically just stores IP addresses of connected users and a hash of their usernames. 
 No peer-to-peer data is routed through the server, which acts only as a connection broker. Therefore it generates very low network traffic and workload for your hardware and infrastructure.
 The authors of PeerJS offer free access to their PeerJS server, but many people use it and you may find it busy: you'll likely need to deploy your own. See [README-PEERJS.md](/README-PEERJS.md) for a quick start guide.
 
