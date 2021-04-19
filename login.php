@@ -35,10 +35,10 @@ if (isset($_POST['login']) && !empty($_POST['login'])) {
         include_once dirname(__FILE__) . "/auth/" . $CONFIG['auth_module'];
 
         $user = !empty(trim($_POST['user'])) ? trim($_POST['user']) : '';
-        $pass = !empty(trim($_POST['pass'])) ? trim($_POST['pass']) : '';        
+        $pass = !empty(trim($_POST['pass'])) ? trim($_POST['pass']) : '';
 
         $user = strtolower($user); // usernames are case insensitive
-        
+
         $_SESSION['login'] = true; 
         $_SESSION['user']  = null;
         
@@ -149,7 +149,7 @@ body {
 <script>
 $(document).ready(function(){
     $('#version').html('[ ' + AppName + ' v' + AppVersion + ' &dash; clone it from <a target="_blank" href="' + AppGitHub + '">GitHub</a> ]');
-    $('#author').html("By " + AppAuthorShort + " and " + AppContributorsShort + " &dash; " + AppCompanyShort + ' &#128073; <a href="/credits">credits</a>');
+    $('#author').html("By " + AppAuthorShort + " and " + AppContributorsShort + " &dash; " + AppCompanyShort);
 });
 </script>
 
@@ -168,7 +168,7 @@ $(document).ready(function(){
   <div class="row">
     <div class="col-sm-3"></div>
     
-    <div class="mx-auto col-sm-6 border rounded border-primary p-4 bg-clear">
+    <div class="mx-auto col-sm-6 border rounded border-primary p-4 bg-light">
       <h3 class="" style="text-align: center">Login</h3>
 <?php
   if ($errMsg != '') {
@@ -207,9 +207,9 @@ $(document).ready(function(){
     
   </div>
 
-  <div style="position: absolute; bottom: 2; left:2; right:2; width: vw" class="d-flex justify-content-between">
+  <div style="position: absolute; bottom: 2; left:10 right:10; width: vw" class="d-flex justify-content-between bg-light">
     <div id="version" class="credits"></div>
-    <div id="author" class="credits"></div>
+    <div><span id="author" class="credits"></span> &#128073; <a href="/credits">credits</a></div>
   </div>
 </div>
 
