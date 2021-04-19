@@ -5,7 +5,10 @@
     session_start();
 
     if (!isset($_SESSION['login']) || ! $_SESSION['login']) {
-        header('Location: login');
+ // echo "<pre>";
+ // print_r($_COOKIE);
+ // echo "</pre>";
+        //header('Location: login');
     }
 
 ?>
@@ -30,8 +33,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>  
   
-<style>
-</style>
+  <!-- Bootstrap 4 alerts, confirm, prompt boxex -->
+  <script src="js/bootbox.min.js"></script>
   
 <script src="js/utils.js"></script>
 <link rel="stylesheet" href="css/rebooth.css?0.01">
@@ -40,41 +43,90 @@
 <script src="js/rebooth.js?0.01"></script>
   
   
+<style>
+body {
+    background-image: url("images/logo.png");
+    background-repeat: no-repeat;
+}
+</style>
+
   
 <script>
 
+const isLogged = <?= isset($_SESSION['login']) && $_SESSION['login'] ? "true" : "false" ?>;
+
+console.log(isLogged);
 
 
 $(document).ready(function() {
     
     // Set title
     $('#application-name').html(AppName + " v" + AppVersion);
+    
+    $('#version').html('[ ' + AppName + ' v' + AppVersion + ' &dash; clone it from <a target="_blank" href="' + AppGitHub + '">GitHub</a> ]');
+    $('#author').html("By " + AppAuthorShort + " and " + AppContributorsShort + " &dash; " + AppCompanyShort);
+    
+    
+    if (isLogged) {
+        $('#logout').removeClass('disabled');
+    } else {
+        window.location.replace('/login');
+        
+    }
+    
 
 });
 
 </script>
 
+
+
 </head>
 <body>
   <div class="container">
   
-    <div class="card mt-2">
-      <div class="card-header">
-          <div class="display-3">Home</div>
+
+    <div class="row mt-4">
+      <div class="col-sm-2"></div>
+      <div class="mx-auto col-sm-8 bp-4">
+      
+  
+  
+        <div class="card bg-light mt-2">
+          <div class="card-header">
+              <div class="display-4"><span id="application-name"></span></div>
+          </div>
+          <div class="card-body">
+            <h5 class="card-title">Welcome to ReBooth</h5>
+            <p class="card-text">ReBooth (which stands for <em>Remote Booth</em>) is a WebRTC based platform for conference interpreter training, connecting an instructor (teacher, trainer, assessor, &hellip;) and a small group of students.</p>
+            
+            
+            <ul class="list-group">
+              <li class="list-group-item"><a class="btn btn-sm btn-success" href="setup">Set up a class</a><br/><div class="mt-2" style="font-size: 0.85rem">Click here to create a class and start it. You can download the instructor manual <a href="files/manual.pdf" target="_blank">here</a>.</div></li>
+              <li class="list-group-item"><a class="btn btn-sm btn-success" href="booth">Enter a booth</a><div class="mt-2" style="font-size: 0.85rem">Normally, students access their booths via invitation links. You can however log in from here by entering the teacher's email address and the PIN she/he will have given you.</div></li>
+            </ul>
+            
+            <p class="card-text"></p>
+            
+          </div>
+          <div class="card-footer text-right">
+            <a class="btn btn-primary disabled" href="logout" id="logout">Logout</a>
+          </div>
+        </div>  
+  
+  
+  
+      
       </div>
-      <div class="card-body">
-        <p>Main menu</p>
-        <ul>
-          <li><a href="setup">Set up a class</a>
-          <li><a href="booth">Enter a booth</a>
-          <li><a href="logout">Logout</a></li>
-        </ul>
-      </div>
-      <div class="card-footer text-right">
-      <span id="application-name"></span>
-      </div>
-          
-    </div>  
+      <div class="col-sm-2"></div>
+    </div>
+  
+  
+  <div style="position: absolute; bottom: 2; left:10; right:10; width: vw" class="d-flex justify-content-between bg-light">
+    <div id="version" class="credits"></div>
+    <div><span id="author" class="credits"></span> &#128073; <a href="/credits">credits</a></div>
+  </div>
+  
   
  
   </div>
