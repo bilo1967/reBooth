@@ -207,14 +207,10 @@ $(document).ready(function(){
     
   </div>
 
-  <div style="position: absolute; bottom: 2; left:10 right:10; width: vw" class="d-flex justify-content-between bg-light">
+  <div style="position: absolute; bottom: 2; left:10; right:10; width: vw" class="d-flex justify-content-between bg-light">
     <div id="version" class="credits"></div>
-    <div><span id="author" class="credits"></span> &#128073; <a href="/credits">credits</a></div>
+    <div class="credits"><span id="author"></span> &#128073; <a href="/credits">credits</a></div>
   </div>
 </div>
-
-<br/>
 </body>
 </html>
-<?php
-?>

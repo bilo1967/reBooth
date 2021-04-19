@@ -48,6 +48,10 @@ body {
     background-image: url("images/logo.png");
     background-repeat: no-repeat;
 }
+.credits {
+    font-size: 0.8rem;
+    font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji";    
+}
 </style>
   
 <script>
@@ -98,7 +102,7 @@ $(document).ready(function() {
   
   <div style="position: absolute; bottom: 2; left:10; right:10; width: vw" class="d-flex justify-content-between bg-light">
     <div id="version" class="credits"></div>
-    <div><span id="author" class="credits"></span> &#128073; <a href="/credits">credits</a></div>
+    <div class="credits"><span id="author"></span> &#128073; <a href="/credits">credits</a></div>
   </div>
   
   
