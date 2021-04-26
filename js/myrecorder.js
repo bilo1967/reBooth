@@ -1,5 +1,6 @@
 /*
 
+
 const mimeTypes = [
       "video/webm",
       "audio/webm",
@@ -47,11 +48,12 @@ const mimeTypes = [
       "video/x-matroska",
 ];
 
+
 */
 
 // This should always work, either on Chrome and Firefox
 // By default we get only audio
-const defaultMIMEType = 'audio/webm';
+const defaultType = 'audio/webm';
 
 class MyRecorder {
 
@@ -65,7 +67,7 @@ class MyRecorder {
     
     // if no getBlobOnStop callback is passed, then the stop() method will
     // return a promise with the recorded blob and an objectURL to download it
-    constructor(stream, getBlobOnStop = null, type = defaultMIMEType) {
+    constructor(stream, getBlobOnStop = null, type = defaultType) {
         if (! stream instanceof  MediaStream) throw Error("stream is not a MediaStream");
         
         if('mimeType' in type) type = type.mimeType;
@@ -80,7 +82,7 @@ class MyRecorder {
         // If audio only is required and the argument stream has a video track, 
         // we create another MediaStream getting only the first audio track.
         // Otherwise we use the original stream
-        if (type.mimeType.startsWith('audio') && stream.getVideoTracks().length > 0) {
+        if (this.type.mimeType.startsWith('audio') && stream.getVideoTracks().length > 0) {
             // Audio only
             this.mediaStream = new MediaStream();
             this.mediaStream.addTrack(stream.getAudioTracks()[0]);
