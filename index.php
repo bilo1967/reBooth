@@ -107,7 +107,7 @@ $(document).ready(function() {
             
             <ul class="list-group">
               <li class="list-group-item"><a class="btn btn-sm btn-success" href="setup">Set up a class</a><br/><div class="mt-2" style="font-size: 0.85rem">Click here to create a class and start it. You can download the instructor manual <a href="files/manual.pdf" target="_blank">here</a>.</div></li>
-              <li class="list-group-item"><a class="btn btn-sm btn-success" href="booth">Enter a booth</a><div class="mt-2" style="font-size: 0.85rem">Normally, students access their booths via invitation links. You can however log in from here by entering the teacher's email address and the PIN she/he will have given you.</div></li>
+              <li class="list-group-item"><a class="btn btn-sm btn-success" href="booth">Enter a booth</a><div class="mt-2" style="font-size: 0.85rem">Normally, students access their booths via invitation links. You can however access a booth from here and then enter the teacher's email address and the PIN she/he will have given you.</div></li>
             </ul>
             
             <p class="card-text"></p>
