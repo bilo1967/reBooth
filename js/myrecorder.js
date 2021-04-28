@@ -82,7 +82,7 @@ class MyRecorder {
         // If audio only is required and the argument stream has a video track, 
         // we create another MediaStream getting only the first audio track.
         // Otherwise we use the original stream
-        if (this.type.mimeType.startsWith('audio') && stream.getVideoTracks().length > 0) {
+        if (type.startsWith('audio') && stream.getVideoTracks().length > 0) {
             // Audio only
             this.mediaStream = new MediaStream();
             this.mediaStream.addTrack(stream.getAudioTracks()[0]);
