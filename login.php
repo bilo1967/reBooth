@@ -158,7 +158,7 @@ $(document).ready(function(){
 <br/>
 
 <br/>
-<div class="container">
+<div class="container-fluid">
 
 
   <div class="display-3 text-center">ReBooth</div>

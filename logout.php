@@ -74,7 +74,7 @@ $(document).ready(function() {
   
   
   
-  <div class="container">
+  <div class="container-fluid">
   
 
     <div class="row mt-4">
