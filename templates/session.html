@@ -63,7 +63,7 @@
   <script src="js/crc-32.js"></script>
 
   <script src="config/config.js?0.10"></script>
-  <script src="js/rebooth.js?0.05"></script>
+  <script src="js/rebooth.js?0.06"></script>
   
   <script src="js/rebooth-file-manager.js?0.04"></script>
 
@@ -159,7 +159,6 @@ const boothURL        = '<?=$CONFIG["booth_url"]?>';
 
 const RecIdPrefix     = "rs";   // recording session prefix
 
-const BoothPollingInterval = 3210;
 var pollingIntervalTimer = null;
 
 var me                = null; // <===
@@ -173,6 +172,9 @@ var recorderChrono    = null;
 var classCall         = null;
 
 var recordingIds      = null;
+
+// session recording mode can be 'split' (double audio track) or 'default' (just booth)
+var sessionRecordingMode = 'default';
 
 
 // WebAudio API
@@ -388,6 +390,9 @@ $(document).ready(function() {
             // triggering a change in the select box
             $('#select-audio-mode').val(Cookies.get('audio-mode') || 'no');
             $('#select-audio-mode').trigger('change');
+
+            $('#select-record-mode').val(Cookies.get('record-mode') || 'default');
+            $('#select-record-mode').trigger('change');
 
             // Init booths and teacher
             initBooths();
@@ -1035,6 +1040,7 @@ $(document).ready(function() {
                                 crc: fileCRC,
                                 teacher: userName, 
                                 session: session,
+                                recordingMode: sessionRecordingMode,
                             }
                         }
                     });
@@ -1131,6 +1137,7 @@ $(document).ready(function() {
                                 crc: fileCRC,
                                 teacher: userName, 
                                 session: session,
+                                recordingMode: sessionRecordingMode,
                             }
                         }
                     });
@@ -1304,6 +1311,7 @@ $(document).ready(function() {
         let parameters = {
             teacher: userName, 
             session: recordingIds.id,
+            recordingMode: sessionRecordingMode,
         };
         
         switch (data.action) {
@@ -1760,6 +1768,7 @@ if (t.startsWith('##')) {
         $(document).trigger('control-booth-recorder', {
             date: Date.now(), 
             action: "record",
+            parameters: { recordingMode: sessionRecordingMode, },
 //          parameters: { session: null }
         });    
         
@@ -1882,6 +1891,12 @@ if (t.startsWith('##')) {
         }
     });
     
+
+    // Session recording mode
+    $('#select-record-mode').on('change', () => {
+        sessionRecordingMode = $('#select-record-mode').val();
+        Cookies.set('record-mode', sessionRecordingMode, { expires: 365 });
+    });
 
 
     // Select audio mode
@@ -2752,7 +2767,21 @@ function dragElement(id) {
             <option value="RL">Source on Left channel, booth on right channel</option>
           </select>
         </div>      
-      </div>      
+      </div>
+
+
+      <div class="form-group">
+        <label for="select-record-mode">Session recording mode:</label>
+        <div class="input-group">
+          <div class="input-group-prepend">
+            <div class="input-group-text"><i style="width:1em"   class="fas fa-circle"></i></div>
+          </div>
+          <select class="form-control" id="select-record-mode">
+            <option value="default">Record just the booth</option>
+            <option value="split">Record booth on Left channel, source on Right channel</option>
+          </select>
+        </div>      
+      </div>
       
 
 <!--    
