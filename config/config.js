@@ -1,9 +1,7 @@
-// The only thing you need to change is the peerjs server (PeerJSConfig constant below)
-// Avoid editing the rest if you don't know what you are doing
-
 const DebugMode = false;
-const DebugLevel = 1; // 0=errors, 1=warnings, 2=info, 3=details
+const DebugLevel = 2; // 0=errors, 1=warnings, 2=info, 3=details
 const BetaFeatures = false;
+
 
 const PinLength = 6;
 
@@ -15,6 +13,10 @@ const ConsecutiveBatchDefaultDelay  = 0;
 const BoothsGainMax  = 2.25; // Boost booths volume (instructor only)
 const PlayerGainMax  = 2.25; // Boost player volume (both instructor and booth)
 const TeacherGainMax = 1.00; // Boost teacher volume (unused)
+
+// Booth check interval
+const BoothPollingInterval = 3210;
+
 
 // Teacher PC has to handle several upstream and downstream connections
 // Tipically downstream band is larger than upstream so it make sense to
@@ -104,21 +106,29 @@ const ScreenShareConstraints = {
 };
 
 const PeerJSConfig = {
-    host:   'your.peerjs.server', // your peerjs server address
-    port:   9443,                 // your peerjs server port
-    debug:  2,
-    path:   '/',
-    secure: true,                 // use SSL
-    
-    // You may use a STUN-only configuration for testing purposes but if you need
-    // to actually reach (mostly) everyone you definitely need also a TURN server...
+//  host: 'intrain.ditlab.it',
+//  port: 9443, // <= TCP
+
+    host: 'peerjs.ditlab.it',
+    port: 443, // <= TCP
+
+    debug: 2,
+    path: '/',
+    secure: true,
     config: {
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
             { urls: 'stun:stun2.l.google.com:19302' },
+            { urls: 'turn:intrain.ditlab.it:3478', username: 'rebooth', credential: 'R3b00tH'},
+            { urls: 'turn:ice.ditlab.it:3478', username: 'rebooth', credential: 'R3b00tH'},
+            { urls: 'turn:intrain.ditlab.it:5349', username: 'rebooth', credential: 'R3b00tH'},
+            { urls: 'turn:ice.ditlab.it:5349', username: 'rebooth', credential: 'R3b00tH'},
+//          { urls: 'turn:numb.viagenie.ca', username: 'fuffology@gmail.com', credential: 'pippero'},
 //          { urls: 'turn:numb.viagenie.ca', username: 'webrtc@live.com', credential: 'muazkh'},
 //          { urls: 'turn:0.peerjs.com:3478', username: 'peerjs', credential: 'peerjsp' },
+            { urls: 'stun:stun3.l.google.com:19302' },
+            { urls: 'stun:stun4.l.google.com:19302' }
         ]
     },
 };
