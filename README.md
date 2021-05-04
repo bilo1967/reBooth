@@ -126,7 +126,7 @@ This is an example dummy authentication module accepting any valid email address
 ?>
 ```
 
-In the [auth directory](/auth) there are a couple of examples authentication modules with radius and imap authentication. You may adapt them to fit your needs by setting the value of a few constants at the beginning of each module.
+In the [auth directory](/auth) there are a couple of example modules with radius and imap authentication. You may adapt them to fit your needs by setting the value of a few constants at the beginning of each module.
 
 There's also a [guest-auth.inc.php](auth/guest-auth.inc.php) authentication module wich implements a basic local authentication system. Credentials are retrieved from a JSON file which is stored into the data directory and managed using a command line [helper php script located in the bin directory](bin/guest.php). Run the script without parameters to get help. Users can be added, deleted, modified. For each of them it is possible to set a username, a password and an account expiry (in days).
 
