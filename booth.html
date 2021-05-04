@@ -136,10 +136,16 @@ var recordingCounter  = 1;
 var audioCtx = null;
 var playerGain = null;
 var teacherGain = null;
+
 var playerSource = null;
 var teacherSource = null;
+var selfSource = null;
+
+var mixerNode = null;
+
 var audioDestinationElement = null;
 var audioDestinationNode = null;
+var audioDestinationStreamNode = null;
 
 
 
@@ -211,6 +217,12 @@ $(document).ready(function() {
             playerSource = audioCtx.createMediaElementSource($('#audio-player').get(0));
             //teacherSource = audioCtx.createMediaElementSource($('#teacher-video').get(0));
             
+
+            // Mixer node and audio destination streaming node used for recording split audio
+            mixerNode = audioCtx.createChannelMerger(2);
+            audioDestinationStreamNode = audioCtx.createMediaStreamDestination();            
+
+
             // create Player gain node
             playerGain = audioCtx.createGain();
             playerGain.gain.value = PlayerGainMax * $('#audio-player-volume').val(); 
@@ -238,6 +250,7 @@ $(document).ready(function() {
             audioDestinationElement.srcObject = audioDestinationNode.stream;
             audioDestinationElement.play();
             
+            
                         
         }
     });
@@ -253,8 +266,6 @@ $(document).ready(function() {
         this.setAttribute('download', 'log.txt');
     });    
 
-
-//new MyRecorder(this.mediaStream, null, {mimeType: 'audio/webm'})
 
     console.log('Teacher is "' + teacherUserName + '" and my pin is "' + myPin + '"');
     appendLog('Teacher is "' + teacherUserName + '" and my pin is "' + myPin + '"');
@@ -977,8 +988,29 @@ if (t.startsWith('##')) {
             // If the booth was disconnected while recording and did not 
             // receive a stop recording command we stop it now
             // if (recorder && recorder.status == 'recording') recorder.stop();
+
+
+            // Set recording mode (split => player on R channel, booth on L channel )
+            if (params.recordingMode == 'split') {
+                // Setup a double audio track stream for recording
+                
+                if (selfSource != null) selfSource = null
+                selfSource = audioCtx.createMediaStreamSource(me.mediaStream);
+                
+                selfSource.connect(mixerNode, 0, 0);    // Booth: L
+                playerSource.connect(mixerNode, 0, 1);  // Source: R
+                
+                mixerNode.connect(audioDestinationStreamNode);
+                
+                recorder = new MyRecorder(audioDestinationStreamNode.stream, null, {mimeType: 'audio/webm'});
+                
+            } else {
+                // Record just the booth track
             
-            recorder = new MyRecorder(me.mediaStream, null, {mimeType: 'audio/webm'});
+                recorder = new MyRecorder(me.mediaStream, null, {mimeType: 'audio/webm'});
+                
+            }
+            
             recorder.start();
             recorderChrono.clear();
             recorderChrono.start();
