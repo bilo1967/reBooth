@@ -113,7 +113,7 @@ ReBooth needs:
 All of these settings must be implemented in the [config/config.inc.php](config/config.inc.php) file. See the comments on the file itself for details.
 
 
-### authentication module
+### Authentication module
 
 _ReBooth_ is meant to be used within your organization and to authenticate users via your infrastructure. Some examples are provided but no authentication mechanism is actually implemented: you will have to write your authentication module by your own. In this module you will implement an authentication function accepting a username and a password as parameters which returns _true_ if the authentication succeeds, _false_ otherwise. The module file has to be placed be in the [auth](auth) directory, where you'll find a few examples that you may adapt to your needs. The authentication module file and function name are then set in the [config/config.inc.php](config/config.inc.php) file. 
 
