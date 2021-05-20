@@ -30,7 +30,7 @@
         // Do not change these values unless yo know what you are doing
         "session_folder"       => "sessions",   // Teacher's sessions subdirectory directory
         "temp_folder"          => "tmp",        // Teacher's temp subdirectory directory
-        "valid_extensions"     => array( 'wav', 'webm', 'mp3', 'ogg', 'mpeg3'),
+        "valid_extensions"     => array( 'wav', 'm4a', 'mp3', 'ogg', 'mpeg3'),
         "forbidden_extensions" => array( 'exe', 'msi', 'com', 'bat', 'vbs', 'vba', 'lnk', 'app', 'dmg'),
 
 
