@@ -15,8 +15,8 @@
 
         // This will be set as the sender in invitation emails
         "email_sender"     => "noreply@your.site",
-
-
+        "valid_extensions"     => array( 'wav', 'webm', 'mp3', 'ogg', 'mpeg3', 'm4a', 'm4v', 'mp4'),
+        "forbidden_extensions" => array( 'exe', 'msi', 'com', 'bat', 'vbs', 'vba', 'lnk', 'app', 'dmg'),
         /****************/
         /*              */ 
         /* File storage */
@@ -30,16 +30,16 @@
         // Do not change these values unless yo know what you are doing
         "session_folder"       => "sessions",   // Teacher's sessions subdirectory directory
         "temp_folder"          => "tmp",        // Teacher's temp subdirectory directory
-        "valid_extensions"     => array( 'wav', 'm4a', 'mp3', 'ogg', 'mpeg3'),
-        "forbidden_extensions" => array( 'exe', 'msi', 'com', 'bat', 'vbs', 'vba', 'lnk', 'app', 'dmg'),
+        "session_prefix"       => "rs-",
+        
 
 
-        /***************************************************/
-        /*                                                 */
-        /* Send invitations (PHPMailer SMTP configuration) */
-        /*                                                 */
-        /***************************************************/
-        "send_invitations" => false,
+        /********************************/
+        /*                              */
+        /* PHPMailer SMTP configuration */
+        /*                              */
+        /********************************/
+        
         "smtp_host"        => "smtp.your.site",         // Your SMTP host
         "smtp_user"        => 'smtpuser@your.site.it',  // Your SMTP user
         "smtp_pass"        => 'smtppassword',           // Your SMTP password

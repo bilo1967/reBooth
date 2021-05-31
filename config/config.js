@@ -19,8 +19,10 @@ const TeacherGainMax = 1.00; // Boost teacher volume (unused)
 // Booth check interval
 const BoothPollingInterval = 3210;
 
+
 // Allowed uploadable media files
-const AllowedMediaFileExtensions = ['wav','mp3','mpeg3','ogg','m4a'];
+const AllowedMediaFileExtensions = ['wav','mp3','mpeg3','webm','ogg','m4a','mp4','m4v'];
+
 
 // Teacher PC has to handle several upstream and downstream connections
 // Tipically downstream band is larger than upstream so it make sense to
