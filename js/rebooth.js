@@ -9,7 +9,7 @@
 
 
 const AppName              = 'ReBooth';
-const AppVersion           = '0.6.4';
+const AppVersion           = '0.7.0';
 const AppAuthor            = 'Gabriele Carioli';
 const AppContributors      = 'Nicoletta Spinolo';
 const AppCompany           = 'Department of Interpretation and Translation at the University of Bologna';
@@ -646,8 +646,6 @@ class Teacher extends Connection {
             // called two times: 1 for audio track + 1 for video track
             found.mediaConnection.on('stream', (stream) => {
                 
-// HA SENSO ASSOCIARE DUE VOLTE L'ELEMENTO VIDEO ALLO STESSO STREAM?                
-// ??????? =>   if (stream.id == found.mediaConnection.localStream.id) return;
                 found.connect(stream);
        
             });
@@ -734,7 +732,6 @@ class Booth {
 //  localMediaStreamCopy  = null;
     
 //  audioSource         = null;    
-//  audioCtx            = null;
 
     // Web Audio API related fields 
     boothsGainNode        = null;
@@ -1277,51 +1274,59 @@ function validateEmail(mail) {
 }
 
 
-function setUserMediaConstraints() {
+function setUserMediaConstraints(onOk = null, onError = null) {
+    
+console.log("setUserMediaConstraints: ENTER");
 
-  if (window.stream) {
-    window.stream.getTracks().forEach(track => {
-      track.stop();
-    });
-  }
-  const videoSource = $('#select-video-source').val();
-  const audioSource = $('#select-audio-source').val();
+    if (window.stream) {
+        console.log("SIAMO QUI");
+        window.stream.getTracks().forEach(track => {
+            track.stop();
+        });
+    }
+    
+    const videoSource = $('#select-video-source').val();
+    const audioSource = $('#select-audio-source').val();
 
-// console.log("Selected video source: " + videoSource);
-// console.log("Selected audio source: " + audioSource);
+//  console.log("Selected video source: " + videoSource);
+//  console.log("Selected audio source: " + audioSource);
   
   
-  var constraints = LocalCameraConstraints;
+    var constraints = LocalCameraConstraints;
 
 
-  //if (constraints.video == true && videoSource) constraints.video = {};
-  //if (constraints.audio == true && audioSource) constraints.audio = {};
+    //if (constraints.video == true && videoSource) constraints.video = {};
+    //if (constraints.audio == true && audioSource) constraints.audio = {};
+
+    if (audioSource) {
+        if (constraints.audio == true) constraints.audio = {};
+        constraints.audio.deviceId = {exact: audioSource};
+    }
+    if (videoSource) {
+        if (constraints.video == true) constraints.video = {};
+        constraints.video.deviceId = {exact: videoSource};
+    }
   
-  if (audioSource) {
-      if (constraints.audio == true) constraints.audio = {};
-      constraints.audio.deviceId = {exact: audioSource};
-  }
-  if (videoSource) {
-      if (constraints.video == true) constraints.video = {};
-      constraints.video.deviceId = {exact: videoSource};
-  }
-  
 
-  //constraints.video.deviceId = videoSource ? {exact: videoSource} : undefined;
-  //constraints.audio.deviceId = audioSource ? {exact: audioSource} : undefined;
+    //constraints.video.deviceId = videoSource ? {exact: videoSource} : undefined;
+    //constraints.audio.deviceId = audioSource ? {exact: audioSource} : undefined;
 
-  console.log("Device constraints: " + JSON.stringify(constraints));
+    console.log("Device constraints: " + JSON.stringify(constraints));
 
-  navigator.mediaDevices.getUserMedia(constraints)
-           .then(gotLocalMediaStream)
-           .then(gotDevices)
-           .catch(handleLocalMediaStreamError);
-
+    navigator.mediaDevices.getUserMedia(constraints)
+        .then(gotLocalMediaStream)
+        .then(() => { if (typeof onOk === 'function') onOk(constraints); })
+        .catch((err) => {
+            handleLocalMediaStreamError(err);  
+            if (typeof onError === 'function') {
+                onError(err.name, err.message);
+            } 
+        });
 }
 
 // Handles error by logging a message to the console.
 function handleLocalMediaStreamError(error) {
-  console.error(`navigator.getUserMedia error: ${error.toString()}.`);
+    console.error(`navigator.getUserMedia error: ${error.toString()}.`);
 }
 
 
