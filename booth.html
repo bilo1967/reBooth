@@ -35,6 +35,10 @@
   <!-- Bootstrap 4 alerts, confirm, prompt boxex -->
   <script src="js/bootbox.min.js"></script>
   
+  <!-- Toastr -->
+  <script src="//cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">  
+  
   <!-- Cookies.set('pippo', "Bla bla bla", {expires: 14}); let x = Cookies.get('pippo'); -->
   <script src="js/js.cookie.js"></script>
   
@@ -53,8 +57,8 @@
   <script src="js/log.js"></script>  
 
   <link rel="stylesheet" href="css/rebooth.css?v0.4">
-  <script src="config/config.js?0.09"></script>
-  <script src="js/rebooth.js?v0.6"></script>
+  <script src="config/config.js?0.10"></script>
+  <script src="js/rebooth.js?v0.7"></script>
   
   
 <style>
@@ -69,6 +73,11 @@ body {
     color: white;
 }
 
+/* Hide media controls even in fullscreen mode */
+#audio-player::-webkit-media-controls {
+  display:none !important;
+}
+
 
 .teacher-video-controls {
     position: absolute;
@@ -79,7 +88,12 @@ body {
     height: var(--normal-video-height);
 }
 
+.log-item-info {
+    color: DarkOliveGreen;
+}
+
 .log-item-warning {
+    color: MidnightBlue;
     font-style: italic;
 }
 
@@ -103,6 +117,13 @@ body {
   width: auto;
 }
 
+
+.toast-middle {
+    position: fixed;
+    top: 85%;
+    left: 50%;
+    transform: translate(-50%, -50%); /* bring your own prefixes */
+}
 
 </style>
   
@@ -150,9 +171,7 @@ var audioDestinationStreamNode = null;
 
 
 
-
-
-
+var boothPlayerGainMax = PlayerGainMax;
 
 
 
@@ -193,6 +212,63 @@ function updateClock(){
 } 
 
 
+function appendLog(message, cls="") {
+    $("#log-board").append('<div class="log-board-item ' + cls + '">' + message + "</div>");
+    $("#log-board").scrollToEnd();
+}
+
+
+function handleMediaSuccess(c) {
+
+    var videoDeviceId = c.video.deviceId.exact;
+    var audioDeviceId = c.audio.deviceId.exact;
+    
+    var videoDeviceDescr = $("#select-video-source option:selected").text().replace(/ *\([0-9a-z]+:[0-9a-z]+\)$/i, '');
+    var audioDeviceDescr = $("#select-audio-source option:selected").text().replace(/ *\([0-9a-z]+:[0-9a-z]+\)$/i, '');
+    
+    toastr.success(
+        "Video device: &ldquo;" + videoDeviceDescr + "&rdquo;<br/>" +
+        "Audio device: &ldquo;" + audioDeviceDescr + "&rdquo;",
+        "Audio and video device successfully set",
+         {positionClass: "toast-middle", timeOut: 2000}
+    );    
+
+    console.log(`${videoDeviceId}:[${videoDeviceDescr}] => ` + $("#select-video-source").val() );
+    console.log(`${audioDeviceId}:[${audioDeviceDescr}] => ` + $("#select-audio-source").val() );
+
+    appendLog('Camera: ' + videoDeviceDescr, 'log-item-info');
+    appendLog('Microphone: ' + audioDeviceDescr, 'log-item-info');
+}
+
+function handleMediaErrors(err, message) {
+    var msg, dev;
+    
+    switch(err) {
+    case 'NotAllowedError':
+        bootbox.alert({
+            centerVertical: true,
+            title: "Error: you've denied the usage of your webcam or microphone",
+            message: AppName + " will not work if you don't allow the usage of your webcam and microphone/headset.<br/>Please, check the address bar of your browser and click on the <i class=\"fas fa-lock\"></i> symbol if you're using Chrome or <i class=\"fas fa-video\"></i> if you're using Firefox and grant the usage of your webcam and microphone."
+        });
+        break;
+    case 'AbortError':
+    case 'NotReadableError':
+    case 'OverconstrainedError':
+        dev = message.includes('video') ? 'webcam' : (message.includes('audio') ? 'microphone' : 'device');
+        msg = "The selected " + dev + " can't be used at this time or is not responding.";
+        toastr.warning(msg + "<br/>" + AppName + " will not work properly without a webcam or microphone. Please, select another one.", "Warning", {positionClass: "toast-middle", timeOut: 5000} );
+        appendLog(msg);
+        break;
+        
+    default:
+        console.log("handleMediaErrors:", err, message);
+        break;
+
+    }
+}
+
+
+
 $(document).ready(function() {
 
     // Bootstrap custom tooltips
@@ -200,6 +276,15 @@ $(document).ready(function() {
 //  $("input[data-toggle='tooltip']").mouseout(function(){
 //    $(this).tooltip('hide');
 //  });    
+    
+    
+    $('#audio-player').on('click', function() {
+    
+        if (document.fullscreen) $('#player-toggle-fullscreen-button').trigger('click');
+        
+    });
+    
+
     
     
     loadClock();
@@ -225,7 +310,7 @@ $(document).ready(function() {
 
             // create Player gain node
             playerGain = audioCtx.createGain();
-            playerGain.gain.value = PlayerGainMax * $('#audio-player-volume').val(); 
+            playerGain.gain.value = boothPlayerGainMax * $('#audio-player-volume').val();
             playerSource.connect(playerGain);
             
             // create Teacher gain node
@@ -276,11 +361,6 @@ $(document).ready(function() {
         
     });
     
-    
-    function appendLog(message, cls="") {
-        $("#log-board").append('<div class="log-board-item ' + cls + '">' + message + "</div>");
-        $("#log-board").scrollToEnd();
-    }
 
     $('#log-board').html("");
     appendLog("Welcome to " + AppName + " v" + AppVersion);
@@ -302,15 +382,9 @@ $(document).ready(function() {
 
 
     // Load local camera and microphone selectors
-    setDeviceSelectors({
-       vs: $('#select-video-source')[0], // select box for video source devices
-       as: $('#select-audio-source')[0], // select box for audio source devices
-       ao: $('#select-audio-output')[0], // select box for audio output devices
-    });
-    
-    
-
-
+    setDeviceSelector($('#select-video-source').get(0), 'videoinput');  // select box for video source devices
+    setDeviceSelector($('#select-audio-source').get(0), 'audioinput');  // select box for audio source devices
+    setDeviceSelector($('#select-audio-output').get(0), 'audiooutput'); // select box for audio output devices
 
 
 
@@ -325,7 +399,10 @@ $(document).ready(function() {
         console.log("Clearing batch");
 
         if (batchChrono) batchChrono.clear();
-        if (batchTimeout) clearTimeout(batchTimeout);
+        if (batchTimeout) {
+            clearTimeout(batchTimeout);
+            loadAndPlay("sounds/dblbeep.wav");
+        }
         
         $('#batch-display').removeClass('hide').addClass('hide');
         
@@ -487,7 +564,7 @@ $(document).ready(function() {
                 }
                 console.log('Changing bandwidth profile to ' + profile);                
                 setBandwidthProfile(profile);
-                setUserMediaConstraints();
+                setUserMediaConstraints(handleMediaSuccess, handleMediaErrors);
                 
             } else if (data.batch) {
             
@@ -565,6 +642,8 @@ $(document).ready(function() {
                                 parameters: data.batch.parameters ? data.batch.parameters : null
                             });
 
+                            loadAndPlay("sounds/dblbeep.wav");
+
                         }, (delay + 2)*1000);
                     });                    
 
@@ -576,6 +655,12 @@ $(document).ready(function() {
                     appendLog("Starting consecutive translation session");
                     
 
+                    //loadAndPlay("sounds/beep.wav");
+                    $('#recorder-chrono').text("--:--");
+                    
+                    $('#batch-type').html('Consecutive');
+                    $('#batch-display').removeClass('hide');
+                    
                     // Start audio player
                     $(document).trigger('teacher-player-commands', {
                         date: Date.now(),
@@ -583,12 +668,6 @@ $(document).ready(function() {
                         parameters: data.batch.parameters ? data.batch.parameters : null
                     });
                     
-                    
-                    $('#batch-type').html('Consecutive');
-                    $('#batch-display').removeClass('hide');
-                    
-
-
                     $('#batch-counter').html(duration.toMMSS());
                     
                     batchChrono = new MyChrono(
@@ -631,6 +710,8 @@ $(document).ready(function() {
                                     action: 'stop-and-save',
                                     parameters: data.batch.parameters ? data.batch.parameters : null
                                 });
+                                
+                                loadAndPlay("sounds/dblbeep.wav");
                             
                             }, (duration + 2) * 1000);
                         
@@ -694,26 +775,27 @@ $(document).ready(function() {
 
 
     // Reload device list when the config button is clicked
-    $('#config-button').on('click', function(e) {
+    $('#config-button, #refresh-devices').on('click', function(e) {
         e.preventDefault();
         if ($(this).hasClass('disabled')) return;
+        
         console.log("enumerating devices");
-        navigator.mediaDevices
-            .enumerateDevices()
-            .then(gotDevices)
-            .then(() => {
-                $('#config-panel').modal('show');
+        
+        getDevices()
+            .then(() => { 
+                $('#config-panel').modal('show'); 
             })
-            .catch(handleLocalMediaStreamError);    
+            .catch(handleLocalMediaStreamError);
+
     });
 
     $('#select-video-source').on('change', () => {
         Cookies.set('student-video-source', $('#select-video-source').val(), { expires: 365 });
-        setUserMediaConstraints();
+        setUserMediaConstraints(handleMediaSuccess, handleMediaErrors);
     });
     $('#select-audio-source').on('change', () => {
         Cookies.set('student-audio-source', $('#select-audio-source').val(), { expires: 365 });
-        setUserMediaConstraints();
+        setUserMediaConstraints(handleMediaSuccess, handleMediaErrors);
     });
     $('#select-audio-output').on('change', () => {
         Cookies.set('student-audio-output', $('#select-audio-output').val(), { expires: 365 });
@@ -723,28 +805,37 @@ $(document).ready(function() {
         changeAudioDestination(audioDestinationElement);
         
     });
-
     
+    
+    //
+    // Volume overboost
+    //
+    boothPlayerGainMax = Cookies.get('volume-overboost') || PlayerGainMax;
+    $('#select-volume-overboost').val(boothPlayerGainMax == PlayerGainMax ? 'default' : boothPlayerGainMax);
+    
+    $('#select-volume-overboost').on('change', function () {
+        boothPlayerGainMax = $(this).val() == 'default' ? PlayerGainMax : $(this).val();
 
-    navigator.mediaDevices
-        .enumerateDevices()
-        .then(gotDevices)
+        console.log("=======> " + boothPlayerGainMax);
+        
+        Cookies.set('volume-overboost', boothPlayerGainMax, { expires: 365 });
+        $('#audio-player-volume').trigger('input');
+    
+    });
+
+
+    getDevices()
         .then(() => {
             $('#select-video-source').val(Cookies.get('student-video-source') || 'default');
             $('#select-audio-source').val(Cookies.get('student-audio-source') || 'default');
             $('#select-audio-output').val(Cookies.get('student-audio-output') || 'default');
-        })
-        .then(() => {
-            setUserMediaConstraints();  
+
+            setUserMediaConstraints(handleMediaSuccess, handleMediaErrors);
             changeAudioDestination($('#teacher-video')[0]);
             //changeAudioDestination($('#audio-player')[0]);
             changeAudioDestination(audioDestinationElement);
         })
         .catch(handleLocalMediaStreamError);
-    
-    //setUserMediaConstraints();  
-
-
     
 
     // log to PeerJS server and get an Id
@@ -851,34 +942,40 @@ $(document).ready(function() {
     $('#send-chat-text').on('click', function() {
         let t = $('#chat-text').val().trim();
         
-if (t.startsWith('##')) {
-    
-    let n = t.substring(2);
-    
-    if (isNaN(n)) {
-        if (n == "destroy") me.peer.destroy();
-        return;
-    }
-    
-    if (n=="0") {
-        $('body').css('background', 'linear-gradient(180deg, rgba(255,220,172,1) 0%, rgba(175,168,100,1) 33%, rgba(99,103,30,1) 100%)');
-    } else {
-    
-        $('body').css('background', 'url(images/bg'+n+'.jpg) no-repeat center center fixed')
-        $('body').css('background-size', 'cover');
-    }
-
-    return;
-}
+        if (t.startsWith('##')) {
+            
+            let n = t.substring(2);
+            
+            if (isNaN(n)) {
+                switch(n) {
+                case 'destroy':
+                    me.peer.destroy();
+                    break;
+                case 'video':
+                    $('#player-container').toggleClass('hide');
+                    break;
+                    
+                }
+                
+            } else {
+                if (n=="0") {
+                    $('body').css('background', 'linear-gradient(180deg, rgba(255,220,172,1) 0%, rgba(175,168,100,1) 33%, rgba(99,103,30,1) 100%)');
+                } else {
+                
+                    $('body').css('background', 'url(images/bg'+n+'.jpg) no-repeat center center fixed')
+                    $('body').css('background-size', 'cover');
+                }
+            }
+            
         
+            return;
+        }
         
         if (t == "") return;
         
-        t = "<span>" + t + "<br/></span>";
+        me.send({chat: {text: `<span>${t}<br/></span>`}});
         
-        me.send({chat: {text: t}});
-
-        $("#chat-board").append(t);
+        $("#chat-board").append(`<span>You: ${t}<br/></span>`);
                       
         $("#chat-board").scrollToEnd();        
         
@@ -1120,12 +1217,23 @@ if (t.startsWith('##')) {
     
     $(document).on('fullscreenchange', function() {
         $('#toggle-fullscreen-button > i').removeClass('fa-compress-arrows-alt fa-expand-arrows-alt');
+        $('#player-toggle-fullscreen-button > i').removeClass('fa-compress-arrows-alt fa-expand-arrows-alt');
         if (document.fullscreen) {
             $('#toggle-fullscreen-button > i').addClass('fa-compress-arrows-alt');
+            $('#player-toggle-fullscreen-button > i').addClass('fa-compress-arrows-alt');
         } else {
-            $('#toggle-fullscreen-button > i').addClass('fa-expand-arrows-alt');
+            $('#player-toggle-fullscreen-button > i').addClass('fa-expand-arrows-alt');
         }
     });
+    
+    $('#player-toggle-fullscreen-button').on('click', function() {
+        if (document.fullscreen) {
+            closeFullscreen();
+        } else {
+            openFullscreen($('#audio-player').get(0));
+        }
+    });
+    
 
     $('#toggle-fullscreen-button').on('click', function() {
         if (document.fullscreen) {
@@ -1133,10 +1241,19 @@ if (t.startsWith('##')) {
         } else {
             openFullscreen($('#screen-share-video')[0]);
         }
-    });     
+    });
     
     $(document).on('enterpictureinpicture', () => { console.log('enterpictureinpicture'); }); 
     $(document).on('leavepictureinpicture', () => { console.log('leavepictureinpicture'); });
+
+    $('#player-toggle-pip-button').on('click', function() {
+        if (document.pictureInPicture) {
+            closePictureInPicture();
+        } else {
+            openPictureInPicture($('#audio-player').get(0));
+        }
+    });
+
     
     $('#toggle-pip-button').on('click', function() {
         if (document.pictureInPicture) {
@@ -1144,7 +1261,7 @@ if (t.startsWith('##')) {
         } else {
             openPictureInPicture($('#screen-share-video')[0]);
         }
-    });      
+    });
 
     // Abort controller to interrupt fetch commands
     var controller = null;
@@ -1200,8 +1317,6 @@ if (t.startsWith('##')) {
                   throw Error(res.status);
                 }
                 
-console.log(res);
-                
                 //return res.blob(); 
                 //return res.text(); 
                 return res.arrayBuffer(); 
@@ -1226,9 +1341,12 @@ console.log(res);
                 // Carico il blob nel player
                 audioPlayer.src = objectURL;
                 
+                
                 $('#audio-player-text').html(baseName(file));
                 
-                appendLog("Audio file '<em>" + baseName(file) + "</em>' loaded");
+                
+                
+                appendLog("Media file '<em>" + baseName(file) + "</em>' loaded");
                             
             }).catch( (e) => {
 
@@ -1237,7 +1355,7 @@ console.log(res);
                 let code = e.name != "Error" ? e.name : e.message;
                 
                 if (code == 'crc-error') {
-                    console.warn("Player error: audio file CRC mismatch");
+                    console.warn("Player error: media file CRC mismatch");
                     
                     me.send({
                         player: {
@@ -1245,7 +1363,7 @@ console.log(res);
                             parameters: {
                                 file: fileName,
                                 crc: fileCRC,
-                                mesg: "Teacher's and booth's audio file differs",
+                                mesg: "Teacher's and booth's media file differs",
                             }
                         }
                     });     
@@ -1266,7 +1384,7 @@ console.log(res);
                             }
                         }
                     });
-                    appendLog("Can't load audio file '<em>" + fileName + "</em>' (" + message + ")", "log-item-error");
+                    appendLog("Can't load media file '<em>" + fileName + "</em>' (" + message + ")", "log-item-error");
                 }
             });   
 
@@ -1291,7 +1409,8 @@ console.log(res);
     
     $('#audio-player-volume').on('input', function() {
     
-        playerGain.gain.setValueAtTime(PlayerGainMax * $(this).val(), audioCtx.currentTime);
+        // playerGain.gain.setValueAtTime(PlayerGainMax * $(this).val(), audioCtx.currentTime);
+        playerGain.gain.value = boothPlayerGainMax * $(this).val();
         // $('#audio-player').get(0).volume = $(this).val();
     });
 
@@ -1332,7 +1451,7 @@ console.log(res);
 
     // Quando il player può eseguire il suo contenuto
     $('#audio-player').on('canplaythrough', function() {
-        let audio_player = $(this)[0];
+        let audioPlayer = $(this)[0];
 
         console.log("Media file is loaded and ready to play");
         // Tell the teacher that media file is loaded and ready to play
@@ -1348,9 +1467,26 @@ console.log(res);
         });
 
         $('#audio-player-progress').css('width', "100%");
-        let t = "" + Math.floor(audio_player.duration);
+        let t = "" + Math.floor(audioPlayer.duration);
         $('#audio-player-display').html("00:00:00 / " + t.toHHMMSS());
         $('#audio-player-progress').css('width', "0%");
+        
+        
+        
+        // Show the player
+        if (audioPlayer.captureStream) {
+            n = audioPlayer.captureStream().getVideoTracks().length;
+        } else if (audioPlayer.mozCaptureStream) {
+            n = audioPlayer.mozCaptureStream().getVideoTracks().length;
+        } else {
+            n = 0;
+        }
+        if (n > 0) {
+            $('#player-container').removeClass('hide');
+        } else {
+            $('#player-container').addClass('hide');
+        }
+
         
         animateCSS('#audio-player-controls', 'rubberBand');
         loadAndPlay("sounds/click.wav");
@@ -1548,13 +1684,18 @@ var setVuMeter = null;
 
 // Sets the MediaStream as the video element src.
 function gotLocalMediaStream(stream) {
-    console.log("gotLocalMediaStream");
+
+    if (DebugMode) console.log("gotLocalMediaStream: begin");
 
     me.setMediaStream(stream);
     setVuMeter(stream);
+    window.stream = stream;
+    
+    if (DebugMode) console.log("gotLocalMediaStream: end");
     
     // Pass argument to next element in promise chain
-    return navigator.mediaDevices.enumerateDevices();  
+    //return navigator.mediaDevices.enumerateDevices();
+    return stream;
 }
 
 
@@ -1753,7 +1894,32 @@ function gotLocalMediaStream(stream) {
               </div>
             </div>
             <!-- END: SCREEN SHARE DIV -->
-              
+            
+            <!-- BEGIN: MEDIA PLAYER DIV -->
+            <div id="player-container" class="hide card connection border rounded m-1" style="width: 316px;">
+            
+              <div class="card-header text-white bg-dark" id="teacher-header">Media player</div>
+              <div class="card-body bg-dark">
+                <div class="d-flex justify-content-center position-relative bg-success">
+                
+                  <video class="" width="307" height="230" id="audio-player" class="align-self-center"></video>
+                  <div style="position: absolute; right: 2px; bottom: 2px;">
+                    <!--button 
+                      id="player-toggle-pip-button"
+                      title="full screeen mode on/off"
+                      class="btn btn-outline-light btn-sm"><i class="fas">PiP</i></button-->
+                    <button 
+                      id="player-toggle-fullscreen-button"
+                      title="full screeen mode on/off"
+                      class="btn btn-outline-light btn-sm">
+                        <i class="fas fa-expand-arrows-alt"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- END: MEDIA PLAYER DIV -->            
+                          
         
           </div>
         
@@ -1783,8 +1949,20 @@ function gotLocalMediaStream(stream) {
 
 
 
-<!-- the audio player is invisible -->
-<video id="audio-player" style="display: none"></video>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   
   
@@ -1839,6 +2017,32 @@ function gotLocalMediaStream(stream) {
           <select class="form-control" id="select-audio-output"></select>
         </div>      
       </div>
+      
+
+      <div class="form-group" data-tooltip="tooltip" title="Warning: too loud volume may damage your hearing">
+        <label for="select-volume-overboost">Player volume overboost:</label>
+        <div class="input-group">
+          <div class="input-group-prepend">
+            <div class="input-group-text"><i style="width:1em" class="fas fa-volume-up"></i></div>
+          </div>
+          <select class="form-control" id="select-volume-overboost">
+            <option value="default">default</option>
+            <option value="1">1x</option>
+            <option value="2">2x</option>
+            <option value="3">3x</option>
+            <option value="4">4x</option>
+            <option value="5">5x</option>
+            <option value="6">6x</option>
+            <option value="7">7x</option>
+            <option value="8">8x</option>
+            <option value="9">9x</option>
+            <option value="10">10x</option>
+          </select>
+          
+        </div>      
+      </div>      
+      
+      
 <!--    
       
       <hr/>
@@ -1861,6 +2065,7 @@ function gotLocalMediaStream(stream) {
     
       </div>
       <div class="modal-footer">
+        <button type="button" class="btn btn-info mr-auto" id="refresh-devices">Refresh device list</button>      
         <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
       </div>
     </div>
