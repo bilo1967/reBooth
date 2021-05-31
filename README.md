@@ -10,10 +10,10 @@ ReBooth (which stands for _Remote Booth_) is a [WebRTC](https://webrtc.org/) bas
 
 The system connects an instructor and a small group of students (up to 7/8 depending on the hardware quality and the instructor's bandwidth, expecially upstream).
 
-ReBooth WebRTC connections are peer-to-peer and not peer-to-server (no SFU/MCU). There's a single audio/video WebRTC connection between the instructor and each student (the connection topology is star shaped). The instructor can communicate one-way with the whole class (class call) or individually talk with each student (intercom). Students can communicate each other only via chat, with text messages transparently routed by the instructor using the WebRTC data channel. Audio and binary files, on the other hand, are exchanged using a web server.
+ReBooth WebRTC connections are peer-to-peer and not peer-to-server (no SFU/MCU). There's a single audio/video WebRTC connection between the instructor and each student (the connection topology is star shaped). The instructor can communicate one-way with the whole class (class call) or individually talk with each student (intercom). Students can communicate each other only via chat, with text messages transparently routed by the instructor using the WebRTC data channel. Media and binary files, on the other hand, are exchanged using a web server.
 
 To reduce the risk of compromising student activity, ReBooth:
-1) Sends the entire audio file to the student's browser before the instructor starts the session or exam. This allows the student to listen to the audio file in its original audio quality, without being affected by any connection problems or drops.
+1) Sends the entire media file to the student's browser before the instructor starts the session or exam. This allows the student to listen to the media file in its original quality, without being affected by any connection problems or drops.
 2) Records the student's audio with two separate procedures: on the one hand, it records the audio streaming the instructor receives on their computer and, on the other, it records the student's audio locally on their computer and then sends this audio to the server where ReBooth is hosted.
 3) Students can save their recordings and eventually send them to the instructor by other means.
 
@@ -106,7 +106,7 @@ In the provided configuration file there are public STUN servers but no TURN ser
 ReBooth needs:
 * a SMPT server to send email invitations to students;
 * a few info to correctly generate these invitations;
-* a directory writable by the web server to store instructor's audio files, student's recordings and temporary stuff;
+* a directory writable by the web server to store instructor's media files, student's recordings and temporary stuff;
 * private and public key for Google Captcha v2 (optional);
 * instructions on how to access your authentication mudule (see next section).
 
