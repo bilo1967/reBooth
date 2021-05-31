@@ -1,3 +1,12 @@
+## [v0.7.0]
+Introduced video media support.
+
+## [v0.6.6]
+Audio feedback when sims/cons are over.
+
+## [v0.6.5]
+Source audio overboost option in configuration panel for booths.
+
 ## [v0.6.4]
 Introduced optional "double track" recording on booth's recorder (player audio track on R channel, booth audio on L channel). This feature is disabled by default and can be enabled (at run time) in the audio device configuration panel by the instructor.
 
