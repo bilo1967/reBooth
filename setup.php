@@ -47,6 +47,14 @@
 
   
 <style>
+body {
+    background-image: url("images/logo.png");
+    background-repeat: no-repeat;
+}
+.credits {
+    font-size: 0.8rem;
+    font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji";    
+}
 </style>
   
 <script>
@@ -96,7 +104,7 @@ $(document).ready(function() {
             $('#email-list-button-bar').show();
         } else {
             $('#start-class').removeClass('disabled').addClass('disabled');
-            $('#start-class-no-invitations').removeClass('disabled').addClass('disabled');
+            //$('#start-class-no-invitations').removeClass('disabled').addClass('disabled');
             $('#email-list-button-bar').hide();    
         }        
     }
@@ -137,7 +145,9 @@ $(document).ready(function() {
        var good = [], bad = [];
        
        el.forEach(e => {
-           if (e == "") return; 
+           e = e.replaceAll(/[<>]/g, '').trim();
+           if (e == "") return;
+           
            if (!validateEmail(e) || invitations.find((i) => { return i.email == e })) {
                bad.push(e);
            } else {
@@ -172,7 +182,7 @@ $(document).ready(function() {
            $('#email-list-button-bar').show();    
        } else {
            $('#start-class').removeClass('disabled').addClass('disabled');
-            $('#start-class-no-invitations').removeClass('disabled').addClass('disabled');
+           //$('#start-class-no-invitations').removeClass('disabled').addClass('disabled');
            $('#email-list-button-bar').hide();
        }
     });
@@ -196,7 +206,7 @@ $(document).ready(function() {
         
        if (invitations.length == 0) {
            $('#start-class').removeClass('disabled').addClass('disabled');
-            $('#start-class-no-invitations').removeClass('disabled').addClass('disabled');
+           //$('#start-class-no-invitations').removeClass('disabled').addClass('disabled');
            
            $('#email-list-button-bar').hide();
        }
@@ -364,9 +374,9 @@ $(document).ready(function() {
 
 </head>
 <body>
-  <div class="container" style="width: 60rem">
+  <div class="container-fluid" style="width: 60rem">
   
-    <div class="card mt-2">
+    <div class="card mt-2 bg-light">
       <div class="card-header">
           <div class="display-4">Create a class</div>
       </div>
@@ -400,7 +410,7 @@ $(document).ready(function() {
                 <div class="input-group-prepend">
                   <span class="input-group-text unselectable bg-primary text-white">@</span>
                 </div>
-                <textarea name="email" id="email" class="form-control" placeholder="Insert email addresses one per line or separated by commas..."></textarea>
+                <textarea name="email" id="email" class="form-control" placeholder="Insert email addresses one per line or separated by commas or spaces. You may leave any names or other text. Anything that is not an email address will be skipped."></textarea>
               </div>
               
             </div>
@@ -450,7 +460,7 @@ $(document).ready(function() {
 ?>
               </div>
               <div class="col-md-5">
-                <button id="start-class-no-invitations" class="btn btn-success disabled w-100">Just load the class</button>
+                <button id="start-class-no-invitations" class="btn btn-success w-100">Just load the class</button>
               </div>
               
             </div>            
@@ -471,8 +481,8 @@ $(document).ready(function() {
 
       <div class="card-footer">
 
-        <p><a href="session">&rArr; Go (back) to the class and manually add new booths</a></p>
-        <p><a href="logout">&rArr; Logout</a></p>
+        <a class="btn btn-sm btn-outline-dark" href="session">&rArr; Go (back) to the class and manually add new booths</a>
+        <a class="btn btn-sm btn-outline-dark" href="logout">&rArr; Logout</a>
       
       
       </div>

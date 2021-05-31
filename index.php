@@ -5,9 +5,6 @@
     session_start();
 
     if (!isset($_SESSION['login']) || ! $_SESSION['login']) {
- // echo "<pre>";
- // print_r($_COOKIE);
- // echo "</pre>";
         //header('Location: login');
     }
 

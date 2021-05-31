@@ -150,6 +150,23 @@ body {
 $(document).ready(function(){
     $('#version').html('[ ' + AppName + ' v' + AppVersion + ' &dash; clone it from <a target="_blank" href="' + AppGitHub + '">GitHub</a> ]');
     $('#author').html("By " + AppAuthorShort + " and " + AppContributorsShort + " &dash; " + AppCompanyShort);
+    
+    
+    
+    $('#show-password').on('mousedown', function() {
+        $('#show-password > i').removeClass('fa-eye').addClass('fa-eye-slash');
+        $('#pass').attr('type', 'text');
+    });
+
+    $('#show-password').on('mouseup', function() {
+        $('#show-password > i').removeClass('fa-eye-slash').addClass('fa-eye');
+        $('#pass').attr('type', 'password');
+    });
+    $('#show-password').on('mouseleave', function() {
+        $('#show-password > i').removeClass('fa-eye-slash').addClass('fa-eye');
+        $('#pass').attr('type', 'password');
+    });
+    
 });
 </script>
 
@@ -183,7 +200,14 @@ $(document).ready(function(){
         </div>
         <div class="form-group">
           <label for="pass">Password:</label>
-          <input type="password" class="form-control" id="pass" name="pass" placeholder="<?=$CONFIG['auth_password_placeholder']?>">
+          <div class="input-group">
+            <input type="password" class="form-control" id="pass" name="pass" placeholder="<?=$CONFIG['auth_password_placeholder']?>">
+            <div class="input-group-append ">
+              <div class="input-group-text unselectable cursor-pointer" style="width:2.75rem" id="show-password">
+                <i class="far fa-eye"></i>
+              </div>
+            </div>
+          </div>
         </div>
         
 <?php 
