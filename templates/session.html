@@ -46,6 +46,10 @@
   <!-- Bootstrap 4 alerts, confirm, prompt boxex -->
   <script src="js/bootbox.min.js"></script>
   
+  <!-- Toastr -->
+  <script src="//cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+  
   <script src="js/myrecorder.js"></script>
   <script src="js/mychrono.js"></script>
   <script src="js/log.js"></script>  
@@ -62,7 +66,7 @@
   <script src="js/utils.js?0.02"></script>
   <script src="js/crc-32.js"></script>
 
-  <script src="config/config.js?0.10"></script>
+  <script src="config/config.js?0.11"></script>
   <script src="js/rebooth.js?0.06"></script>
   
   <script src="js/rebooth-file-manager.js?0.04"></script>
@@ -81,6 +85,26 @@
     cursor: move;
 }
 
+#audio-player {
+  height: auto !important;
+  width: 100% !important;
+}
+
+
+#player-container {
+    width: 25vw;
+    height: 25vh;
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    cursor: move;
+    background: transparent;
+    overflow: hidden;
+}
+
+
+
+
 
 .file-item:hover {
     background: #ffffd0 !important;
@@ -91,10 +115,7 @@
     background: transparent !important;
 }
 
-bo-dy {
-    background: rgb(2,0,36);
-    background: linear-gradient(0deg, rgba(2,0,36,1) 0%, rgba(56,9,121,1) 16%, rgba(0,212,255,1) 100%);
-}
+
 
 body {
     background: url(images/bg10.jpg) no-repeat center center fixed;
@@ -134,8 +155,12 @@ body {
 }
 
 
+.log-item-info {
+    color: DarkOliveGreen;
+}
 
 .log-item-warning {
+    color: MidnightBlue;
     font-style: italic;
 }
 
@@ -146,6 +171,13 @@ body {
 
 .log-board-item {
     font-size: 0.75rem;
+}
+
+.toast-middle {
+    position: fixed;
+    top: 85%;
+    left: 50%;
+    transform: translate(-50%, -50%); /* bring your own prefixes */
 }
 
 </style>
@@ -311,6 +343,64 @@ function updateClock(){
     $('#time').text(hours+":"+minutes);
 } 
 
+
+function appendLog(message, cls="") {
+    $("#log-board").append('<div class="log-board-item ' + cls + '">' + message + "</div>");
+    $("#log-board").scrollToEnd();
+    $("#log-board-container").scrollToEnd();
+}
+
+
+function handleMediaSuccess(c) {
+
+    var videoDeviceId = c.video.deviceId.exact;
+    var audioDeviceId = c.audio.deviceId.exact;
+    
+    var videoDeviceDescr = $("#select-video-source option:selected").text().replace(/ *\([0-9a-z]+:[0-9a-z]+\)$/i, '');
+    var audioDeviceDescr = $("#select-audio-source option:selected").text().replace(/ *\([0-9a-z]+:[0-9a-z]+\)$/i, '');
+    
+    toastr.success(
+        "Video device: &ldquo;" + videoDeviceDescr + "&rdquo;<br/>" +
+        "Audio device: &ldquo;" + audioDeviceDescr + "&rdquo;",
+        "Audio and video device successfully set",
+         {positionClass: "toast-middle", timeOut: 2000}
+    );
+
+    console.log(`${videoDeviceId}:[${videoDeviceDescr}] => ` + $("#select-video-source").val() );
+    console.log(`${audioDeviceId}:[${audioDeviceDescr}] => ` + $("#select-audio-source").val() );
+    
+    appendLog('Camera: ' + videoDeviceDescr, 'log-item-info');
+    appendLog('Microphone: ' + audioDeviceDescr, 'log-item-info');
+}
+
+function handleMediaErrors(err, message) {
+    var msg, dev;
+    
+    switch(err) {
+    case 'NotAllowedError':
+        bootbox.alert({
+            centerVertical: true,
+            title: "Error: you've denied the usage of your webcam or microphone",
+            message: AppName + " will not work if you don't allow the usage of your webcam and microphone/headset.<br/>Please, check the address bar of your browser and click on the <i class=\"fas fa-lock\"></i> symbol if you're using Chrome or <i class=\"fas fa-video\"></i> if you're using Firefox and grant the usage of your webcam and microphone."
+        });
+        break;
+    case 'AbortError':
+    case 'NotReadableError':
+    case 'OverconstrainedError':
+        dev = message.includes('video') ? 'webcam' : (message.includes('audio') ? 'microphone' : 'device');
+        msg = "The selected " + dev + " can't be used at this time or is not responding.";
+        toastr.warning(msg + "<br/>" + AppName + " will not work properly without a webcam or microphone. Please, select another one.", "Warning", {positionClass: "toast-middle", timeOut: 5000} );
+        appendLog(msg);
+        break;
+
+    default:
+        console.log("handleMediaErrors:", err, message);
+        break;
+    }
+}
+
+
+
 $(document).ready(function() {
 
     recordingIds = new SessionIdGenerator(RecIdPrefix);
@@ -321,6 +411,10 @@ $(document).ready(function() {
       $(this).tooltip('hide');
     });    
     
+    // Set media file allowed extensions
+    $('#file-upload').attr('accept', AllowedMediaFileExtensions.map(x => '.' + x).join(','));
+    $('label[for=file-upload]').text("Choose file (" + AllowedMediaFileExtensions.join(', ') + ")");
+   
     loadClock();
 
     bootbox.alert({
@@ -410,32 +504,25 @@ $(document).ready(function() {
                 }
             }, BoothPollingInterval);
             
-            
-            navigator.mediaDevices
-                .enumerateDevices()
-                .then(gotDevices)
+            getDevices()
                 .then(() => {
                     $('#select-video-source').val(Cookies.get('teacher-video-source') || 'default');
                     $('#select-audio-source').val(Cookies.get('teacher-audio-source') || 'default');
                     $('#select-audio-output').val(Cookies.get('teacher-audio-output') || 'default');
-                })
-                .then(() => {
-                    setUserMediaConstraints();  
+           
+                    setUserMediaConstraints(handleMediaSuccess, handleMediaErrors);
                     changeAudioDestination($('#audio-player').get(0));
                     
                     changeAudioDestination(audioDestinationElement);
                     
                     me.forEachBooth(booth => {
                         changeAudioDestination(booth.videoElement);
-                   });
-                })        
+                    });
+                })
                 .catch(handleLocalMediaStreamError);
-            
-            
-            
-            
-            // Check if we're starting in class call mode or not
-            // I's here because it can be called only after the class
+
+            // Checking if we're starting in class call mode or not
+            // here because it can be called only after the class
             // call click event handler has been defined
             if (!me.selfMuted()) {
                 activateClassCall(true);
@@ -474,11 +561,6 @@ $(document).ready(function() {
     $('#recorder-stop').removeClass('disabled').addClass('disabled');
 
 
-    function appendLog(message, cls="") {
-        $("#log-board").append('<div class="log-board-item ' + cls + '">' + message + "</div>");
-        $("#log-board").scrollToEnd();
-        $("#log-board-container").scrollToEnd();
-    }
 
     $('#log-board').html("");
     appendLog("Welcome to " + AppName + " v" + AppVersion);
@@ -486,6 +568,7 @@ $(document).ready(function() {
 
     // Make self video div draggable around
     dragElement("teacher");
+    dragElement("player-container");
 
     recorderChrono = new MyChrono(100, (t) => {
         t = Math.floor(t / 10);
@@ -509,11 +592,10 @@ $(document).ready(function() {
     
 
     // Load local camera and microphone selectors
-    setDeviceSelectors({
-       vs: $('#select-video-source')[0], // select box for video source devices
-       as: $('#select-audio-source')[0], // select box for audio source devices
-       ao: $('#select-audio-output')[0], // select box for audio output devices
-    });
+    setDeviceSelector($('#select-video-source').get(0), 'videoinput');  // select box for video source devices
+    setDeviceSelector($('#select-audio-source').get(0), 'audioinput');  // select box for audio source devices
+    setDeviceSelector($('#select-audio-output').get(0), 'audiooutput'); // select box for audio output devices
+
     
     
 /*
@@ -1202,29 +1284,28 @@ $(document).ready(function() {
     
     });
 
+
     
-    
-    
-    
-    // Reload device list when the config button is clicked
-    $('#config-button').on('click', function() {
+
+    // Reload device list when the config button is clicked    
+    $('#config-button, #refresh-devices').on('click', function() {
         console.log("enumerating devices");
-        navigator.mediaDevices
-            .enumerateDevices()
-            .then(gotDevices)
-            .then(() => {
-                $('#config-panel').modal('show');
+        getDevices()
+            .then(() => { 
+                
+                $('#config-panel').modal('show'); 
             })
-            .catch(handleLocalMediaStreamError);    
+            .catch(handleLocalMediaStreamError);
     });
     
+
     $('#select-video-source').on('change', () => {
         Cookies.set('teacher-video-source', $('#select-video-source').val(), { expires: 365 });
-        setUserMediaConstraints();
+        setUserMediaConstraints(handleMediaSuccess, handleMediaErrors);  
     });
     $('#select-audio-source').on('change', () => {
         Cookies.set('teacher-audio-source', $('#select-audio-source').val(), { expires: 365 });
-        setUserMediaConstraints();
+        setUserMediaConstraints(handleMediaSuccess, handleMediaErrors);  
     });
     $('#select-audio-output').on('change', () => {
         Cookies.set('teacher-audio-output', $('#select-audio-output').val(), { expires: 365 });
@@ -1237,16 +1318,6 @@ $(document).ready(function() {
         });
     });
     
-//  $('#select-video-source').on('change', setUserMediaConstraints);
-//  $('#select-audio-source').on('change', setUserMediaConstraints);
-//  $('#select-audio-output').on('change', () => {
-//      changeAudioDestination($('#audio-player')[0]);
-//      me.forEachBooth(booth => {
-//          changeAudioDestination(booth.videoElement);
-//      });
-//  });
-    
-
         
     // setUserMediaConstraints();
 
@@ -1259,13 +1330,7 @@ $(document).ready(function() {
         ];
         initBooths();
         initTeacher();
-/*        
-        navigator.mediaDevices
-            .enumerateDevices()
-            .then(gotDevices)
-            .catch(handleLocalMediaStreamError);
-        setUserMediaConstraints();    
-*/        
+
         //
         // save invitations to session
         //
@@ -1591,7 +1656,7 @@ if (t.startsWith('##')) {
         case 'bw.max':
             let profile = n.substring(3);
             setBandwidthProfile(profile);
-            setUserMediaConstraints();
+            setUserMediaConstraints(handleMediaSuccess, handleMediaErrors);  
             me.sendToAll({ profile: { value: profile}});
             console.log('Changing bandwidth profile to ' + profile);
             break;
@@ -2053,8 +2118,22 @@ if (t.startsWith('##')) {
         $(this).val();        
 */        
     });    
-    
-    
+
+
+    var togglePlayerSize = false;
+    $('#player-container').on('dblclick', function() {
+        let r = togglePlayerSize ? 1/2 : 2;
+        togglePlayerSize = ! togglePlayerSize;
+        $(this)
+            .addClass('hide')
+            .height($('#player-container').height() * r)
+            .width($('#player-container').width() * r)
+            .css('top', 'auto', 'bottom', '6px')
+            .css('left', 'auto', 'right', '6px')
+            .removeClass('hide');    
+    });
+  
+  
     /////////////////////////////
     //                         //
     // BOOTH SPECIFIC CONTROLS //
@@ -2194,6 +2273,15 @@ if (t.startsWith('##')) {
     });
 
 
+
+    $('#audio-player').on('ended', function() {
+        if (! $('#player-container').hasClass('hide')) {
+            console.log('IL POSTO È QUELLO GIUSTO');
+            $('#audio-player').attr('poster', "images/abby-normal.jpg");
+        }
+    });
+
+
     $('#booths').on('click', '.download-booth-recording', (e) => {
         
         if ($(this).hasClass('disabled')) {
@@ -2258,10 +2346,17 @@ if (t.startsWith('##')) {
 // Sets the MediaStream as the video element src.
 function gotLocalMediaStream(stream) {
 
+    if (DebugMode) console.log("gotLocalMediaStream: begin");
+
     me.setMediaStream(stream);
+    window.stream = stream;
+    
+    if (DebugMode) console.log("gotLocalMediaStream: end");
+
     
     // Pass argument to next element in promise chain
-    return navigator.mediaDevices.enumerateDevices();  
+    //return navigator.mediaDevices.enumerateDevices();  
+    return stream;
 }
 
 
@@ -2611,6 +2706,9 @@ function dragElement(id) {
     </div>
 
 
+    <div class="hide rounded" id="player-container" title="Double click to resize">
+        <video id="audio-player" poster="images/abby-normal.jpg"></video>
+    </div>
 
     
   </div>
@@ -2635,7 +2733,8 @@ function dragElement(id) {
         </div>
         
         <div class="d-flex justify-content-center mb-0">
-          <video class="video-normal booth-video cursor-pointer" 
+          <video class="video-normal booth-video cursor-pointer"
+             disablePictureInPicture 
              width="240" height="180"
              data-tooltip="tooltip" title="Click to listen to/mute the booth."></video>
         </div>
@@ -2643,7 +2742,7 @@ function dragElement(id) {
       
       <div class="card-footer d-flex justify-content-between align-items-center">
           <div class="">
-            <button class="talk-to-booth btn btn-sm btn-success"  title="Talk to the booth"><i class="fas fa-headset"></i></button>
+            <button class="talk-to-booth btn btn-sm btn-success" data-tooltip="tooltip" title="Talk to the booth"><i class="fas fa-headset"></i></button>
             &nbsp;
           </div>
           <div class="">
@@ -2656,7 +2755,6 @@ function dragElement(id) {
   <!-- BOOTH PROTOTYPE: END -->
 
  
-<video id="audio-player" style="display: none"></video>
 
 
 
@@ -2671,7 +2769,7 @@ function dragElement(id) {
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="exampleModalLongTitle">File manager</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close" id="file-manager-close-button-1">
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
@@ -2683,14 +2781,14 @@ function dragElement(id) {
         </div>
         <form method="post" class="m-2" action="" enctype="multipart/form-data" id="file-upload-form">     
         
-            <div class="d-flex">
+            <div class="d-flex" >
               <div class="custom-file">
-                <input type="file" class="custom-file-input" id="file-upload" name="file-upload" accept=".wav,.mp3,.mpeg3,.webm,.ogg">
+                <input type="file" class="custom-file-input" id="file-upload" name="file-upload" accept="">
                 <label class="custom-file-label" for="file-upload" >Choose file</label>
               </div>
               
               <div class="">
-              <button class="btn btn-success ml-3" style="width: 8.5rem" id="file-upload-button">Upload</button>
+                <button class="btn btn-success ml-3" style="width: 8.5rem" id="file-upload-button">Upload</button>
               </div>          
             </div>
         
@@ -2698,7 +2796,7 @@ function dragElement(id) {
         <div class="m-2 p-2 bg-light" id="file-manager-log"></div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal" id="file-manager-close-button-2">Close</button>
       </div>
     </div>
   </div>
@@ -2806,7 +2904,8 @@ function dragElement(id) {
     
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-info mr-auto" id="refresh-devices">Refresh device list</button>
+        <button type="button" class="btn btn-success" data-dismiss="modal">Close</button>
       </div>
     </div>
     
