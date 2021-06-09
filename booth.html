@@ -56,10 +56,11 @@
   <script src="js/mychrono.js"></script>  
   <script src="js/log.js"></script>  
 
-  <link rel="stylesheet" href="css/rebooth.css?v0.4">
+  <link rel="stylesheet" href="css/rebooth.css?v0.6">
   <script src="config/config.js?0.10"></script>
   <script src="js/rebooth.js?v0.7"></script>
   
+  <script src="js/common.js?0.00"></script>
   
 <style>
 
@@ -178,94 +179,10 @@ var boothPlayerGainMax = PlayerGainMax;
 
 
 
-function loadClock() {
-    updateClock();
-    setInterval(updateClock, 1000);
-}
-
-function updateClock(){
-    var months = [ 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December' ];
-    var days = [ 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday' ];
-   
-    var date = new Date();
-   
-    var hours = date.getHours();
-    
-    var minutes = date.getMinutes() < 10 
-                  ? '0' + date.getMinutes() 
-                  : date.getMinutes();
-    
-    //var seconds = date.getSeconds() < 10 
-    //              ? '0' + date.getSeconds() 
-    //              : date.getSeconds();
-    
-    var dayOfWeek = days[date.getDay()];
-    //var month = months[date.getMonth()];
-    var month = date.getMonth() + 1;
-    var day = date.getDate();
-    var year = date.getFullYear();
-    
-    var dateString = dayOfWeek + ', ' + day + '/' + month + '/' + year;
-    
-    $('#date').text(dateString);
-    $('#time').text(hours+":"+minutes);
-} 
 
 
-function appendLog(message, cls="") {
-    $("#log-board").append('<div class="log-board-item ' + cls + '">' + message + "</div>");
-    $("#log-board").scrollToEnd();
-}
 
 
-function handleMediaSuccess(c) {
-
-    var videoDeviceId = c.video.deviceId.exact;
-    var audioDeviceId = c.audio.deviceId.exact;
-    
-    var videoDeviceDescr = $("#select-video-source option:selected").text().replace(/ *\([0-9a-z]+:[0-9a-z]+\)$/i, '');
-    var audioDeviceDescr = $("#select-audio-source option:selected").text().replace(/ *\([0-9a-z]+:[0-9a-z]+\)$/i, '');
-    
-    toastr.success(
-        "Video device: &ldquo;" + videoDeviceDescr + "&rdquo;<br/>" +
-        "Audio device: &ldquo;" + audioDeviceDescr + "&rdquo;",
-        "Audio and video device successfully set",
-         {positionClass: "toast-middle", timeOut: 2000}
-    );    
-
-    console.log(`${videoDeviceId}:[${videoDeviceDescr}] => ` + $("#select-video-source").val() );
-    console.log(`${audioDeviceId}:[${audioDeviceDescr}] => ` + $("#select-audio-source").val() );
-
-    appendLog('Camera: ' + videoDeviceDescr, 'log-item-info');
-    appendLog('Microphone: ' + audioDeviceDescr, 'log-item-info');
-}
-
-function handleMediaErrors(err, message) {
-    var msg, dev;
-    
-    switch(err) {
-    case 'NotAllowedError':
-        bootbox.alert({
-            centerVertical: true,
-            title: "Error: you've denied the usage of your webcam or microphone",
-            message: AppName + " will not work if you don't allow the usage of your webcam and microphone/headset.<br/>Please, check the address bar of your browser and click on the <i class=\"fas fa-lock\"></i> symbol if you're using Chrome or <i class=\"fas fa-video\"></i> if you're using Firefox and grant the usage of your webcam and microphone."
-        });
-        break;
-    case 'AbortError':
-    case 'NotReadableError':
-    case 'OverconstrainedError':
-        dev = message.includes('video') ? 'webcam' : (message.includes('audio') ? 'microphone' : 'device');
-        msg = "The selected " + dev + " can't be used at this time or is not responding.";
-        toastr.warning(msg + "<br/>" + AppName + " will not work properly without a webcam or microphone. Please, select another one.", "Warning", {positionClass: "toast-middle", timeOut: 5000} );
-        appendLog(msg);
-        break;
-        
-    default:
-        console.log("handleMediaErrors:", err, message);
-        break;
-
-    }
-}
 
 
 
@@ -472,19 +389,22 @@ $(document).ready(function() {
                 let pin = ("pin" in data.chat) ? data.chat.pin : null;
                 let who = ("who" in data.chat) ? data.chat.who : null;
                 
-                let t = "";
+                //let t = "";
                 if (who) {
                     let n = who.indexOf("@");
                     if (n > 0) who = who.substr(0, n);
                     who = who.trunc(15);
                     
-                    t = "<span style='color: brown'><b>" + who + "</b>&gt; " + data.chat.text + "</span>";
+                    //t = "<span style='color: brown'><b>" + who + "</b>&gt; " + data.chat.text + "</span>";
                 } else {
-                    t = "<span style='color: blue'><b>Teacher</b>&gt; " + data.chat.text + "</span>";
+                    who = "teacher";
+                    //t = "<span style='color: blue'><b>Teacher</b>&gt; " + data.chat.text + "</span>";
                 }
+                
+                writeToChat(data.chat.text, who);
 
-                $("#chat-board").append(t);
-                $("#chat-board").scrollToEnd();               
+                //$("#chat-board").append(t);
+                //$("#chat-board").scrollToEnd();               
                 
             } else if (data.flags) {
                 // Here we handle notifications
@@ -972,14 +892,18 @@ $(document).ready(function() {
         }
         
         if (t == "") return;
+/*        
+        me.send({chat: {text: "<span>" + t + "<br/></span>"}});
         
-        me.send({chat: {text: `<span>${t}<br/></span>`}});
-        
-        $("#chat-board").append(`<span>You: ${t}<br/></span>`);
+        $("#chat-board").append("<span>You: " + t + "<br/></span>");
                       
         $("#chat-board").scrollToEnd();        
         
         $('#chat-text').val('');
+*/
+        me.send({chat: {text: t}});
+        writeToChat(t);
+        
     });
     
     $('#button-raise-hand').on('click', function() {
@@ -1567,136 +1491,9 @@ $(document).ready(function() {
         
         copyTextToClipboard(t);
     });
-    
-    
-    
-    
-    
 
-    // Setup the VU-Meter
-    var micGraph = $("#vumeter")[0];
-    var micGraphCanvasCtx = micGraph.getContext("2d");
-    
-    setVuMeter = function(stream) {
-    
-        if (stream == null) return;
-        
-        var audioCtx = new AudioContext();    
-    
-        // connect microphone to node chain
-        var mic = audioCtx.createMediaStreamSource(stream);
-        
-        // Create an analyser to draw a waveform for mic input
-        var analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 256;
-        analyser.minDecibels = -90;
-        analyser.maxDecibels = -10;
-        analyser.smoothingTimeConstant = 0.85;        
-
-        var bufferLength = analyser.frequencyBinCount;
-        var dataArray = new Uint8Array(bufferLength);
-        
-       
-        // Create a zero gain node to avoid own mic feedback to headphones
-        var zeroGain = audioCtx.createGain();
-        zeroGain.gain.value = 0.0;
-        
-        // Create node chain 
-        mic.connect(analyser);
-        analyser.connect(zeroGain);
-        zeroGain.connect(audioCtx.destination);
-        
-        console.log(micGraph.width, micGraph.height);
-
-        const bars = 12;
-        const barWidth = Math.floor(micGraph.width / bars);
-       
-        // Draw microphone output waveform
-        (function draw() {
-            var drawVisual = requestAnimationFrame(draw);
-            
-            analyser.getByteFrequencyData(dataArray);
-            
-            micGraphCanvasCtx.fillStyle = 'rgb(240, 240, 240)';
-            micGraphCanvasCtx.fillRect(0, 0, micGraph.width, micGraph.height);
-       
-            var sum = 0;
-            for(var i = 0; i < dataArray.length; i++) {
-                sum += dataArray[i];
-            }
-            var avg = sum / (256 * dataArray.length); // between 0 and 1
-            let b = 0;
-            
-            if (avg > 0.270) b=12; else
-            if (avg > 0.245) b=11; else
-            if (avg > 0.230) b=10; else
-            if (avg > 0.217) b=9;  else
-            if (avg > 0.195) b=8; else
-            if (avg > 0.185) b=7; else
-            if (avg > 0.161) b=6; else
-            if (avg > 0.119) b=5; else
-            if (avg > 0.088) b=4; else
-            if (avg > 0.065) b=3; else
-            if (avg > 0.043) b=2; else
-            if (avg > 0.030) b=1; else
-            b = 0;     
-            
-            for (var j = 0, x = 0; j < b; j++) {
-                micGraphCanvasCtx.fillStyle = 'rgb(40,40,150)';
-                micGraphCanvasCtx.fillRect(x + 2, 0, barWidth - 4, micGraph.height);
-                x += barWidth;
-            }
-            
-            micGraphCanvasCtx.stroke();        
-        } ()) ;    
-    }
-    
-    
-    
-    // Potrebbe non funzionare su Android?
-    
-//  var audioCtx = new AudioContext();
-//  const MaxVolume = 1;
-//  function bindMediaElementToGainNode(elem) {
-//      var source = audioCtx.createMediaElementSource(elem);
-//      elem.volume = 1/MaxVolume;
-//      
-//      // create a gain node
-//      var gainNode = audioCtx.createGain();
-//      gainNode.gain.value = MaxVolume; 
-//      source.connect(gainNode);
-//      
-//      // connect the gain node to an output destination
-//      gainNode.connect(audioCtx.destination);
-//  }
-//  bindMediaElementToGainNode($("#audio-player")[0]);
-    
-    
-    
-    
-    
 });
 
-
-
-var setVuMeter = null;
-
-
-// Sets the MediaStream as the video element src.
-function gotLocalMediaStream(stream) {
-
-    if (DebugMode) console.log("gotLocalMediaStream: begin");
-
-    me.setMediaStream(stream);
-    setVuMeter(stream);
-    window.stream = stream;
-    
-    if (DebugMode) console.log("gotLocalMediaStream: end");
-    
-    // Pass argument to next element in promise chain
-    //return navigator.mediaDevices.enumerateDevices();
-    return stream;
-}
 
 
 
@@ -1832,7 +1629,7 @@ function gotLocalMediaStream(stream) {
                       
                       step="0.01" value="1" min="0" max="1">
                   </div>
-                  <video class="video-normal" id="teacher-video" poster="images/hartman.jpg" width="240" height="180" ></video>
+                  <video class="video-normal" id="teacher-video" poster="images/teacher-poster.jpg" width="240" height="180" ></video>
                   
                   <div id="teacher-label" class="text-center ellipsis label-small ml-auto mr-auto" style="position: absolute; bottom: 1px;"></div>
             
