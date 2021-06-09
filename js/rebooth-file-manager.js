@@ -26,7 +26,7 @@ $(document).ready(function() {
                     data.Data.forEach(f => { 
                         let t =
                         '<div class="input-group file-item unselectable mb-1" id="file-item-' + i + '" data-filename="' + f.name  + '">' +
-                        '  <div class="file-item-select input-group-prepend input-group-text unselectable cursor-pointer text-light bg-success" title="use this file"><i class="far fa-hand-point-right"></i></div>' +
+                        '  <div class="file-item-select input-group-prepend input-group-text unselectable cursor-pointer text-light bg-success" title="Send this file to the booths"><i class="far fa-hand-point-right"></i></div>' +
                         '  <div class="file-item-description form-control ellipsis "><b>' + f.name + '</b> (<i>' + (f.size).toLocaleString('en') + '</i> bytes)</div>' +
                         '  <div class="input-group-append">' +
                         '    <span class="file-item-delete input-group-text unselectable cursor-pointer bg-warning" title="delete this file">&times;</span>' +
@@ -305,12 +305,6 @@ $(document).ready(function() {
     $('#audio-player').on('canplaythrough', function() {
         var audioPlayer = $(this).get(0);
 
-//      $(document).trigger('player-feedback', {
-//          date: Date.now(), 
-//          action: "ready",
-//          parameters: { file: fileName, crc: fileCRC }
-//      });         
-        
         console.log("Player: audio file loaded and ready to play");
         
         // Il blob è caricato nel player e posso abilitare i bottoni
@@ -350,29 +344,6 @@ $(document).ready(function() {
             $('#player-container').addClass('hide');
         }
 
-        
-/*        
-        var n = 0;
-        
-        if (audioPlayer.captureStream) {
-            n = audioPlayer.captureStream().getVideoTracks().length;
-        } else if (audioPlayer.mozCaptureStream) {
-            n = audioPlayer.mozCaptureStream().getVideoTracks().length;
-        } else {
-            n = 0;
-        }
-        
-        if (n > 0) {
-            $('#player-container').removeClass('hide');
-        } else {
-            $('#player-container').addClass('hide');
-        }        
-*/
-        
-        
-        
-        
-        
     });
     
     // Irrobustiamo il tutto verificando eventuali errori
