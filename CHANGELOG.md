@@ -1,3 +1,18 @@
+## [v0.8.0]
+In "class call" mode now it is possible to talk to a single booth and to broadcast its audio to the others. A single booth can talk at a time but everybody now can listen to it.
+
+## [v0.7.3]
+Class call mode is now displayed also on each single booth. 
+When a booth connects after the class has actually started now can see if the class call mode is active or if the teacher is talking to someone.
+
+## [v0.7.2]
+The vumeter code used to visually check if the microphone is working has been rewrittend and added to the instructor setup panel, also.
+
+## [v0.7.1]
+Chat display code has been rewritten.
+Minor bug fixes.
+Minor file manager interface changes.
+
 ## [v0.7.0]
 Introduced video media support.
 
