@@ -13,7 +13,7 @@ const ConsecutiveBatchDefaultDelay  = 0;
 // Maximum gain values (1=100%)
 // WARNING: overboosting audio volume may cause damage to your hearing
 const BoothsGainMax  = 2.25; // Boost booths volume (instructor only)
-const PlayerGainMax  = 2.25; // Boost player volume (both instructor and booth)
+const PlayerGainMax  = 1.75; // Boost player volume (both instructor and booth)
 const TeacherGainMax = 1.00; // Boost teacher volume (unused)
 
 // Booth check interval
