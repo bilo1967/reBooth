@@ -9,7 +9,7 @@
 
 
 const AppName              = 'ReBooth';
-const AppVersion           = '0.7.0';
+const AppVersion           = '0.8.0';
 const AppAuthor            = 'Gabriele Carioli';
 const AppContributors      = 'Nicoletta Spinolo';
 const AppCompany           = 'Department of Interpretation and Translation at the University of Bologna';
@@ -256,6 +256,7 @@ class Teacher extends Connection {
     onDataDataReceived = function(pin, who, data) { console.log("Data from user " + who + " (pin: " + pin + "):", data);}
     
     screenShareStream  = null;
+    
 
     audioCtx           = null;
     boothsGainNode     = null;
@@ -276,7 +277,9 @@ class Teacher extends Connection {
                 if (! config.boothsGainNode instanceof GainNode) throw 'Invalid destination gain node';
                 if (! 'context' in config.boothsGainNode ) throw 'No context in supplied gain node';
                 
+                this.audioCtx = config.boothsGainNode.context;
                 this.boothsGainNode = config.boothsGainNode;
+                
             }
         }        
         
@@ -404,6 +407,7 @@ class Teacher extends Connection {
         if (found) found.muteTeacher();
         
     }
+
     unmuteSelfForBooth(pin) {
         let found = this.booths[pin];
         if (found) found.unmuteTeacher();
@@ -665,7 +669,46 @@ class Teacher extends Connection {
         });
     }
     
+    startBoothBroadcast(pin) {
+        
+        let found = this.booths[pin];
+        
+        if (!this.mediaStream || found === 'undefined' || !found.connected()) return false;
+        
 
+        // mix teacher's audio with selected booth's audio
+        var mySource = this.audioCtx.createMediaStreamSource(this.mediaStream);
+        var boothSource = this.audioCtx.createMediaStreamSource(found.mediaStream);
+        var mixedAudioDest = audioCtx.createMediaStreamDestination();
+        mySource.connect(mixedAudioDest);
+        boothSource.connect(mixedAudioDest);
+        
+        // Now that we have a mixed audio stream, we need to create a new stream
+        // with the mixed audio track and the teacher's video track
+        
+        var mixedMediaStream = new MediaStream();
+        mixedMediaStream.addTrack(mixedAudioDest.stream.getAudioTracks()[0]);
+        mixedMediaStream.addTrack(this.mediaStream.getVideoTracks()[0]);
+        
+        this.forEachConnectedBooth(booth => {
+            if (booth.pin == pin) return;
+            
+            if (booth.mediaConnection.open) {
+                replaceStreamInMediaConnection(booth.mediaConnection, mixedMediaStream);
+                reduceOutstreamBandwidth(
+                    booth.mediaConnection,
+                    teacherVideoBW,
+                    teacherVRes,
+                    teacherAudioBW
+                );                
+            }
+        });        
+            
+            
+    }
+    stopBoothBroadcast() {
+        this.setMediaStream(this.mediaStream);
+    }
 
     setMediaStream(stream) {
 
@@ -727,12 +770,11 @@ class Booth {
     screenShareConnection = null;
     peer                  = null;    
     audioRecorder         = null;
+    teacherMuted          = true;    
     registry              = {};   // Used to store misc. values
 //  audioBlob             = null;
 //  localMediaStreamCopy  = null;
     
-//  audioSource         = null;    
-
     // Web Audio API related fields 
     boothsGainNode        = null;
     audioCtx              = null;
@@ -828,6 +870,7 @@ class Booth {
         this.videoElement.srcObject = null;
         this.mediaStream = null;
         this.peer = null;
+        this.teacherMuted = true;
 
         // Student could disconnect from booth while 
         // a recording session is still in progress
@@ -871,12 +914,18 @@ class Booth {
                 (!this.audioSourceConnected) : this.videoElement.muted;
     }
     
+    isTeacherMuted() {
+        return this.teacherMuted;
+    }
+    
     muteTeacher(v = true) {
         if (!this.connected) return false;    
         if (v) {
             this.send({system: {value: 'mute teacher'}});
+            this.teacherMuted = true;
         } else {
             this.send({system: {value: 'unmute teacher'}});    
+            this.teacherMuted = false;
         }
         return true;
         
