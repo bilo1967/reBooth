@@ -125,6 +125,10 @@
   white-space: nowrap !important;
 }
 
+.nowrap {
+    white-space: nowrap;
+}
+
 /* extend FontAwesome effetcs */
 
 @keyframes fa-blink-3x {
@@ -267,3 +271,67 @@ input.vertical-slider[type=range]::-moz-range-thumb {
 }
 
 
+.toast-middle {
+    position: fixed;
+    top: 85%;
+    left: 50%;
+    transform: translate(-50%, -50%); 
+}
+
+.absolute-middle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); 
+}
+
+.chat-me {
+    background: #99FFFF;
+    float: right;
+    clear: both;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 2px;
+}
+
+.chat-them {
+    background: #4FFFB0;
+    float: left;
+    clear: both;
+    padding: 5px;
+    border-radius: 15px;
+    margin-bottom: 2px;
+}
+
+.chat-them + .chat-them {
+    border-bottom-left-radius: 3px;
+    border-top-left-radius: 3px;
+}
+
+.chat-last {
+    margin-bottom: 10px;
+}
+
+.chat-them.chat-first {
+    border-top-left-radius: 15px;
+    border-bottom-left-radius: 3px;
+}
+
+.chat-them.chat-last {
+    border-bottom-left-radius: 15px !important;
+}
+
+.chat-who {
+    display: block;
+    font-size: 0.75em;
+}
+
+.chat-teacher {
+    background: #9e1b32;
+    color: white;
+}
+
+.chat-teacher a {
+    color: white;
+    font-weight: bold;
+}
