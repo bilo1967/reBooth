@@ -1,5 +1,5 @@
 ## [v0.8.0]
-In "class call" mode now it is possible to talk to a single booth and to broadcast its audio to the others. A single booth can talk at a time but everybody now can listen to it.
+In "class call" mode it is now possible to talk to a single booth and to broadcast its audio to the others. A single booth can talk at a time but everybody now can listen to it.
 
 ## [v0.7.3]
 Class call mode is now displayed also on each single booth. 
