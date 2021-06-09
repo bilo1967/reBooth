@@ -6,7 +6,6 @@ $(document).ready(function() {
     $('#audio-player-play').removeClass('disabled').addClass('disabled');
     $('#audio-player-stop').removeClass('disabled').addClass('disabled');
     $('#audio-player-pause').removeClass('disabled').addClass('disabled');
-    
   
     listFiles();
     
@@ -382,8 +381,6 @@ $(document).ready(function() {
         $('#audio-player-play').removeClass('disabled');
         $('#audio-player-stop').removeClass('disabled').addClass('disabled');
         $('#audio-player-pause').removeClass('disabled').addClass('disabled');
-        
-        
         
     });       
 
