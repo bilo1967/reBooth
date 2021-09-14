@@ -30,4 +30,18 @@ function readfile_chunked($filename, $retbytes = TRUE) {
 
     return $status;
 }
+
+function valid_filename($filename) {
+    
+    if (strlen($filename) > 255) { // no mb_* since we check bytes
+        return false;
+    }
+
+    if (false !== strpbrk($filename, '|\'\\?*&<";:>+[]=/')) {
+        return false;
+    }
+
+    return true;
+}
+
 ?>

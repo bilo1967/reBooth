@@ -50,17 +50,17 @@ try {
         
         // classCode is an integer
         if (isset($_POST['classCode']) && $_POST['classCode'] && filter_var($_POST['classCode'], FILTER_VALIDATE_INT) === false) {
-            throw new Exception("400"); // Bad request
+            throw new Exception("412"); // Precondition failed
         }
         
         // Session token is a PIN
         if (!isset($_POST['token']) || !filter_var($_POST['token'], FILTER_VALIDATE_REGEXP, array("options"=>array("regexp"=>"/^[0-9]+$/")))) {
-            throw new Exception("400"); // Bad request
+            throw new Exception("403"); // Forbidden
         } 
         
         // Booth pin is a PIN
         if (!isset($_POST['pin']) || !filter_var($_POST['pin'], FILTER_VALIDATE_REGEXP, array("options" => array("regexp" => "/^[0-9]+$/")))) {
-            throw new Exception("400"); // Bad request
+            throw new Exception("403"); // Forbidden
         }        
 
         $token     = $_POST['token'];
@@ -78,7 +78,7 @@ try {
         // Check if booth is part of the class and has the security token 
         $reg = @json_decode(file_get_contents("$workingDirectory/session$classCode.token"));
         if (@($reg->token != $token) || !@in_array($pin, $reg->members) ) {
-//          throw new Exception("401"); // Unauthorized
+            throw new Exception("401"); // Forbidden
             error_log("Booth with pin $pin and token $token is *NOT* authorized to read files");
         } else {
             error_log("Booth with pin $pin and token $token is authorized to access files");
