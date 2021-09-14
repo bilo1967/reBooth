@@ -6,8 +6,9 @@ $(document).ready(function() {
     $('#audio-player-play').removeClass('disabled').addClass('disabled');
     $('#audio-player-stop').removeClass('disabled').addClass('disabled');
     $('#audio-player-pause').removeClass('disabled').addClass('disabled');
+    
   
-    listFiles();
+//  listFiles();
     
     function listFiles() {
         $.ajax({
@@ -47,6 +48,10 @@ $(document).ready(function() {
     
     }
     
+    $('#file-list-refresh-button').on('click', listFiles);
+    
+    $('#file-manager').on('show.bs.modal', listFiles);
+    
     $('#file-manager').on('click', '.file-item-delete', function() {
         let id = $(this).closest('.file-item').attr('id');
         let fn = $(this).closest('.file-item').data('filename'); 
@@ -63,7 +68,7 @@ $(document).ready(function() {
                 dataType: "json",
                 success: function(data) {
                     if (data.Result == "OK") {
-                        console.log("OK", data);
+                        if (DebugLevel >= 2) console.log("File " + fn + " deleted.");
                         $("#file-manager-log").html('File deleted...');
                     } else {
                         $("#file-manager-log").html('<div class="bg-warning"><pre>' + data + '</pre></div>');
@@ -79,7 +84,7 @@ $(document).ready(function() {
           
         }        
         
-        console.log('click on ' + id + " - " + txt);
+        if (DebugLevel >= 2) console.log('click on ' + id + " - " + txt);
     });
 
 
@@ -119,7 +124,7 @@ $(document).ready(function() {
             dataType: "json",
             success: function(data) {
                 if (data.Result == "OK") {
-                    console.log("OK", data);
+                    if (DebugLevel >= 2) console.log("File uploaded", data);
                     $("#file-manager-log").html('file uploaded');
                 } else {
                     $("#file-manager-log").html('<div class="bg-warning">' + data.Message + '</div>');
@@ -143,16 +148,27 @@ $(document).ready(function() {
     });
     
     $('#file-manager').on('click', '.file-item-select', function() {
+        
+
+        // Creo un riferimento di comodo al player
+        const audioPlayer = $('#audio-player').get(0);
+
+
         var id = $(this).closest('.file-item').attr('id');
 
         fileName = $(this).closest('.file-item').data('filename');  // Global
         
         
-        console.log("id:" +id + ", filename: " + fileName + ", userName: " + userName);
+        if (DebugLevel >= 2) console.log("File selected, id:" +id + ", filename: " + fileName + ", userName: " + userName);
         
         loadAndPlay("sounds/click.wav");
         $(this).html("<div class='spinner-border spinner-border-sm text-light'></div>");
 
+        //audioPlayer.src = noSrc; // clear player -> this fires a "can't play file" error
+        
+        // Quando il player può eseguire il suo contenuto
+        $('#audio-player').off('canplaythrough');
+        
 
         // JQuery does not allow reading binary data 
         // via  ajax call so we use the fetch API
@@ -177,7 +193,7 @@ $(document).ready(function() {
         }).then(buf => {
             
             fileCRC = crc32(buf);
-            console.log('CRC32 of file "' + fileName + " is 0x" + fileCRC.toHex());
+            if (DebugLevel >= 2) console.log('CRC32 of file "' + fileName + '" is 0x' + fileCRC.toHex());
 
             var blob = new Blob([ buf ]);
             
@@ -187,7 +203,7 @@ $(document).ready(function() {
             //});
           
             // Il blob è caricato
-            console.log("Blob loaded");
+            if (DebugLevel >= 2) console.log("Blob loaded");
             
             $('.file-item-select').html('<i class="far fa-hand-point-right"></i>');
             
@@ -195,11 +211,13 @@ $(document).ready(function() {
             // Creo un pseudolink per poter caricare il blob come source 
             let objectURL = URL.createObjectURL(blob);
             
-            // Creo un riferimento di comodo al player
-            let audioPlayer = $('#audio-player')[0];
             
             // Carico il blob nel player
             audioPlayer.src = objectURL;
+            
+            $('#audio-player').one('canplaythrough', canPlayThrough);
+            
+            
             
             $('#audio-player-text').html((baseName(fileName)).trunc(28));
             
@@ -215,14 +233,36 @@ $(document).ready(function() {
                     
         }).catch( (e) => {
             
+            // File read error
+            
             let code = e.name != "Error" ? e.name : e.message;
             
             let message = (code in httpErrorCodes) ? httpErrorCodes[code] : "unknown error";
             
-            console.log("Error " + code + ": " + message);
-            console.log(e);
+            console.warn("Error " + code + ": " + message);
+            console.warn(e);
             
-            // GESTIONE DELL'ERRORE DI CARICAMENTO
+            switch (code) {
+                case "400":
+                case "412":
+                    message = "Can't read that file: bad request";
+                    break;
+                case "401":
+                    message = "Your booth is not unauthorized to read the requested file";
+                    break;
+                case "403":
+                    message = "Access to that file is forbidden. Maybe your session has expired?";
+                    break;
+                case "404":
+                    message = "The requested file has not been found";
+                    break;
+                default:
+                    break;
+            }
+            toastr.warning(message, "File read error", {positionClass: "toast-middle", timeOut: 5000} );            
+            
+            $('.file-item-select').html('<i class="far fa-hand-point-right"></i>');
+            
         });            
 
     });
@@ -240,7 +280,7 @@ $(document).ready(function() {
     $('#audio-player-play').on('click',  function() {
         if ($(this).hasClass('disabled')) return;
         
-        console.log("Player: play clicked");
+        if (DebugLevel >= 2) console.log("Player: play clicked");
         
         $(document).trigger('player-feedback', {
             date: Date.now(), 
@@ -259,7 +299,7 @@ $(document).ready(function() {
     $('#audio-player-stop').on('click',  function() {
         if ($(this).hasClass('disabled')) return;
         
-        console.log("Player: stop clicked");
+        if (DebugLevel >= 2) console.log("Player: stop clicked");
 
 
         
@@ -283,7 +323,7 @@ $(document).ready(function() {
     $('#audio-player-pause').on('click', function() {
         if ($(this).hasClass('disabled')) return;
         
-        console.log("Player: pause clicked");
+        if (DebugLevel >= 2) console.log("Player: pause clicked");
         
         $(document).trigger('player-feedback', {
             date: Date.now(), 
@@ -300,11 +340,10 @@ $(document).ready(function() {
     });
 
 
-    // Quando il player può eseguire il suo contenuto
-    $('#audio-player').on('canplaythrough', function() {
-        var audioPlayer = $(this).get(0);
+    var canPlayThrough = function() {
+        var audioPlayer = $('#audio-player').get(0);
 
-        console.log("Player: audio file loaded and ready to play");
+        if (DebugLevel >= 2) console.log("Player: audio file loaded and ready to play");
         
         // Il blob è caricato nel player e posso abilitare i bottoni
         $('#audio-player-play, #audio-player-stop, #audio-player-pause').attr('disabled', false);
@@ -343,12 +382,19 @@ $(document).ready(function() {
             $('#player-container').addClass('hide');
         }
 
-    });
+    }
+
+
     
     // Irrobustiamo il tutto verificando eventuali errori
     $('#audio-player').on('error', (e) => {
+        
+        const audioPlayer = $('#audio-player').get(0);
+        
+        if (audioPlayer.src == noSrc) return;
+        
         $('#audio-player-text').html("Can't play this file");
-        console.log("Player: error", e);
+        console.warn("Player: error", e);
     });
     
     let pp = 0;
@@ -372,7 +418,7 @@ $(document).ready(function() {
     $('#audio-player').on('ended', function() {
         //clearInterval(audio_player_timer);
         
-        console.log("Player: audio file is ended");
+        if (DebugLevel >= 2) console.log("Player: audio file is ended");
         
         $('#audio-player-progress').css('width', "100%");
         
@@ -381,6 +427,8 @@ $(document).ready(function() {
         $('#audio-player-play').removeClass('disabled');
         $('#audio-player-stop').removeClass('disabled').addClass('disabled');
         $('#audio-player-pause').removeClass('disabled').addClass('disabled');
+        
+        
         
     });       
 

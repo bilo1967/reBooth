@@ -9,7 +9,7 @@
 
 
 const AppName              = 'ReBooth';
-const AppVersion           = '0.8.0';
+const AppVersion           = '0.8.3';
 const AppAuthor            = 'Gabriele Carioli';
 const AppContributors      = 'Nicoletta Spinolo';
 const AppCompany           = 'Department of Interpretation and Translation at the University of Bologna';
@@ -74,7 +74,7 @@ class Connection {
         if (userName != null) {
             this.userName = userName;
             this.userId = userName.toLowerCase().hash64();
-            console.log("You're trying to log with username '" + userName + " having id " + this.userId);
+            if (DebugLevel >= 2) console.log("You're trying to log with username '" + userName + " having id " + this.userId);
         }
         
         this.peer = new Peer(
@@ -114,19 +114,19 @@ class Connection {
         
         this.peer.on('open', (id) => { 
             if (this.userId == null) this.userId = id;
-            console.log("this.peer.on [id=" + this.userId + "]");
+            if (DebugLevel >= 3) console.log("this.peer.on [id=" + this.userId + "]");
             //this.connected = true;
             if (typeof this.onLogonOk === 'function') this.onLogonOk(id);
         });
         
         this.peer.on('close', () => { 
-            console.log("this.peer.close event");
+            if (DebugLevel >= 3) console.log("this.peer.close event");
 // GESTIRE CHIUSURA DELLA CONNESSIONE
         });
         
         
         this.peer.on('disconneted', () => { 
-            console.log("We have been disconnected by the signaling server but existing connections should still be alive. Trying to reconnect.");
+            if (DebugLevel >= 3) console.log("We have been disconnected by the signaling server but existing connections should still be alive. Trying to reconnect.");
             setTimeout(() => {this.peer.reconnect();}, 1000);
         });
         
@@ -198,13 +198,15 @@ class Connection {
             break;
         }
 
-        console.log("Logs from error() parsing routine here:");
-        console.log('----------------------------------------');
-        console.log("type: " + err.type);
-        console.log("msg:" + err.msg);
-        console.log("cause: " + err.cause);
-        console.log("retry: " + err.retry);
-        console.log('----------------------------------------');
+        if (DebugLevel >= 3) {
+            console.log("Logs from error() parsing routine here:");
+            console.log('----------------------------------------');
+            console.log("type: " + err.type);
+            console.log("msg:" + err.msg);
+            console.log("cause: " + err.cause);
+            console.log("retry: " + err.retry);
+            console.log('----------------------------------------');
+        }
         
         return err;
     }
@@ -250,10 +252,13 @@ class Teacher extends Connection {
     
     muted              = true;
     
-    onBoothConnect     = function(pin, who) { console.log("User " + who + " (pin: " + pin + ") is connected" ); };
-    onBoothConnected   = function(pin, who) { console.log("User " + who + " (pin: " + pin + ") has completed the connection" ); };
-    onBoothDisconnect  = function(pin, who) { console.log("User " + who + " (pin: " + pin + ") has disconnected"); };
-    onDataDataReceived = function(pin, who, data) { console.log("Data from user " + who + " (pin: " + pin + "):", data);}
+    onBoothConnect     = function(pin, who) { if (DebugLevel >= 2) console.log("User " + who + " (pin: " + pin + ") is connected" ); };
+    onBoothConnected   = function(pin, who) { if (DebugLevel >= 2) console.log("User " + who + " (pin: " + pin + ") has completed the connection" ); };
+    onBoothDisconnect  = function(pin, who) { if (DebugLevel >= 2) console.log("User " + who + " (pin: " + pin + ") has disconnected"); };
+    onDataDataReceived = function(pin, who, data) { if (DebugLevel >= 3) console.log("Data from user " + who + " (pin: " + pin + "):", data);}
+    
+    onBoothICEConnected = (pin, who) => {};
+    onBoothICEDisconnected = (pin, who) => {};
     
     screenShareStream  = null;
     
@@ -281,6 +286,10 @@ class Teacher extends Connection {
                 this.boothsGainNode = config.boothsGainNode;
                 
             }
+            
+            // Handle ICE events
+            if (typeof config.onBoothICEConnected === 'function') this.onBoothICEConnected = config.onBoothICEConnected;
+            if (typeof config.onBoothICEDisconnected === 'function') this.onBoothICEDisconnected = config.onBoothICEDisconnected;
         }        
         
         //if (this.userName == null) throw "userName parameter is missing";
@@ -324,7 +333,7 @@ class Teacher extends Connection {
     
     unshareScreen() {
         
-        console.log('Unsharing screen');
+        if (DebugLevel >= 3) console.log('Unsharing screen');
 
         // Stop the tracks in current screenshare stream to actually stop screensharing
         if (this.sharingScreen()) {
@@ -332,7 +341,7 @@ class Teacher extends Connection {
         }
         
         this.forEachConnectedBooth(booth => {
-            console.log("Closing screen share stream for " + booth.pin);
+            if (DebugLevel >= 3) console.log("Closing screen share stream for " + booth.pin);
             
             // Ugly workaround because PeerJS mediaConnection.on('close', ...)
             // event handler doesn't work well (does it work at all?)
@@ -356,11 +365,11 @@ class Teacher extends Connection {
     shareScreenToBooth(pin) {
         if (this.isBoothConnected(pin) && this.sharingScreen()) {
             let booth = this.getBooth(pin);
-            console.log("Sending screen share stream to booth " + booth.pin);
+            if (DebugLevel >= 3) console.log("Sending screen share stream to booth " + booth.pin);
             booth.screenShareConnection = this.peer.call(booth.peer,  this.screenShareStream);
         } else {
-            if (!this.sharingScreen()) console.log("Not sharing - no need to send a stream");
-            if (!this.isBoothConnected(pin)) console.log("It seems like boot " + pin + " is not connected");
+            if (!this.sharingScreen() && DebugLevel >= 3) console.log("Not sharing - no need to send a stream");
+            if (!this.isBoothConnected(pin) && DebugLevel >= 3) console.log("It seems like boot " + pin + " is not connected");
         }
     }
 
@@ -379,25 +388,24 @@ class Teacher extends Connection {
         if (found === 'undefined') return null;
         return found.isMuted();
     }
-
     unmuteBooth(pin) {
         let found = this.booths[pin];
         if (found === 'undefined') return false;
-        console.log("UNmute booth " + pin);
+        if (DebugLevel >= 2) console.log("UNmute booth " + pin);
         found.unmute();
     }
 
     muteBooth(pin) {
         let found = this.booths[pin];
         if (found === 'undefined') return false;
-        console.log("mute booth " + pin);
+        if (DebugLevel >= 2) console.log("mute booth " + pin);
         found.mute();
     }
     
     
     muteAllBooths() {
         this.forEachBooth(booth => {
-            console.log("mute booth " + booth.pin);
+            if (DebugLevel >= 2) console.log("mute booth " + booth.pin);
             booth.mute();
         });
     }
@@ -415,7 +423,7 @@ class Teacher extends Connection {
 
     muteSelf(v = true) {
         this.forEachConnectedBooth(booth => {
-            console.log("Sending " + (v ? "mute" : "unmute") + "Teacher command to booth " + booth.pin);
+            if (DebugLevel >= 2) console.log("Sending " + (v ? "mute" : "unmute") + " teacher command to booth " + booth.pin);
             booth.muteTeacher(v);
         });
         this.muted = v;
@@ -468,13 +476,13 @@ class Teacher extends Connection {
     
 
     logoff() {
-        console.log("Notify logoff to all connected booths");
+        if (DebugLevel >= 2) console.log("Notify logoff to all connected booths");
         this.sendToAll({system: {value: 'logoff'}});
         
         setTimeout(() => {
             // Disconnect all connected booths
             this.forEachConnectedBooth(booth => {
-                console.log("Disconnecting booth " + booth.pin);
+                if (DebugLevel >= 2) console.log("Disconnecting booth " + booth.pin);
                 booth.disconnect();
             });            
             super.destroy();
@@ -512,7 +520,7 @@ class Teacher extends Connection {
             let who = c.metadata.userName;
             let dataPeer = c.metadata.dataPeer;
             
-            console.log("Incoming connection from '" + who + "' using pin '" + pin + "'");
+            if (DebugLevel >= 2) console.log("Incoming connection from '" + who + "' using pin '" + pin + "'");
             
             
             // We handle the actual PeerJS connection here
@@ -520,13 +528,13 @@ class Teacher extends Connection {
             // The booth starts the media connection only aftet the
             // media connection has been established
             c.on('open', () => {
-                console.log("Data connection established with peer " + c.peer + " identified by:", c.metadata);
+                if (DebugLevel >= 2) console.log("Data connection established with peer " + c.peer + " identified by:", c.metadata);
 
                 let found = this.booths[pin];
                 
                 // Pin not found (invalid pin)
                 if (found === undefined) {
-                    console.log('pin ' + pin + ' not found');
+                    if (DebugLevel >= 2) console.log('pin ' + pin + ' not found');
                     c.send({system: {value: "connection refused", description: "pin not found"}});
                     setTimeout(() => {c.close();}, 1000);
                     if (typeof onErr === 'function') onErr('pin ' + pin + ' not found');
@@ -536,7 +544,7 @@ class Teacher extends Connection {
                
                 // Busy
                 if (found.dataConnection) {
-                    console.log('pin ' + pin + ' already logged');
+                    if (DebugLevel >= 2) console.log('pin ' + pin + ' already logged');
                     c.send({system: {value: "connection refused", description: "pin already logged"}});
                     setTimeout(() => {c.close();}, 1000);
                     if (typeof onErr === 'function') onErr('pin ' + pin + ' already logged');
@@ -545,7 +553,7 @@ class Teacher extends Connection {
                
                 // Someone is media-connected using another peer
                 if (found.peer != null && found.peer != c.peer) {
-                    console.log('data connection and media connection peer differs');
+                    if (DebugLevel >= 2) console.log('data connection and media connection peer differs');
                     c.send({system: {value: "connection refused", description: "data connection and media connection peer differs"}});
                     setTimeout(() => {c.close();}, 1000);
                     if (typeof onErr === 'function') onErr('data connection and media connection peer differs');
@@ -567,7 +575,7 @@ class Teacher extends Connection {
                 if (typeof this.onBoothConnect === 'function') this.onBoothConnect(pin, who);
                 
                 c.on('close', () => {
-                    console.log('Connection closed by booth ' + pin);
+                    if (DebugLevel >= 2) console.log('Connection closed by booth ' + pin);
                     found.disconnect();
                     if (typeof this.onBoothDisconnect === 'function') this.onBoothDisconnect(pin, who);
                 });      
@@ -582,7 +590,7 @@ class Teacher extends Connection {
                             if (typeof this.onBoothConnected === 'function') this.onBoothConnected(pin, who);
                             break;
                         case 'hangup':
-                            console.log('Booth ' + pin + ' has terminated the call');
+                            if (DebugLevel >= 2) console.log('Booth ' + pin + ' has terminated the call');
                             found.disconnect();
                             //if (typeof this.onBoothDisconnect === 'function') this.onBoothDisconnect(pin, who);
                             break;
@@ -608,21 +616,21 @@ class Teacher extends Connection {
             let dataPeer = c.metadata.dataPeer;
 
 
-            console.log("Media call from a possible booth received: pin="+pin+", who="+who+", dataPeer="+dataPeer);
+            if (DebugLevel >= 2) console.log("Media call from a possible booth received: pin="+pin+", who="+who+", dataPeer="+dataPeer);
 
             let found = this.booths[pin];            
 
 
             // Pin not found (invalid pin)
             if (found === undefined) {
-                console.log('pin ' + pin + ' not found');
+                if (DebugLevel >= 2) console.log('pin ' + pin + ' not found');
                 c.close();
                 return;
             }
             
             // Busy
             if (found.mediaConnection) {
-                console.log('pin ' + pin + ' already logged');   
+                if (DebugLevel >= 2) console.log('pin ' + pin + ' already logged');   
                 c.close();
                 return;
             }
@@ -635,7 +643,7 @@ class Teacher extends Connection {
                      cause: 'connect',
                      retry: true
                 };
-                console.log(e.msg);
+                if (DebugLevel >= 2) console.log(e.msg);
                 //if (typeof this.onError === "function") this.onError(e);
 /*                
                 c.close();
@@ -655,14 +663,32 @@ class Teacher extends Connection {
             });
             
             found.mediaConnection.on('error', (err) => {
-                console.log("Booth[" + found.pin + "]: remote media connection has received an error: ", err);
+                console.warn("Booth[" + found.pin + "]: remote media connection has received an error: ", err);
                 if (typeof this.onError === 'function') this.onError(err);
             });
             
             found.mediaConnection.on('close', () => {
-                console.log("Booth[" + found.pin + "]: Remote media stream has been closed"); 
+                if (DebugLevel >= 2) console.log("Booth[" + found.pin + "]: Remote media stream has been closed"); 
             });              
             
+            found.mediaConnection.on('iceStateChanged', (e) => {
+                switch(e) {
+                case 'new':
+                case 'checking':
+                    break;
+                case 'connected':
+                    this.onBoothICEConnected(found.pin, found.who);
+                    break;
+                case 'disconnected':
+                    this.onBoothICEDisconnected(found.pin, found.who);
+                    break;
+                case 'closed':
+                    break;
+                case 'failed':
+                    break;
+                }
+                if (DebugLevel >= 2) console.log("ICE event: booth[" + found.pin + "] ICE connection state is now " + e);
+            });
             
             found.mediaConnection.answer(this.mediaStream);
             
@@ -712,7 +738,7 @@ class Teacher extends Connection {
 
     setMediaStream(stream) {
 
-        console.log("Setting or replacing local stream");
+        if (DebugLevel >= 2) console.log("Setting or replacing local stream");
         
         let micEnabled = true;
         let camEnabled = true;
@@ -732,13 +758,13 @@ class Teacher extends Connection {
             this.videoElement.muted = true;
         }
         
-        console.log('Received local stream.');
+        if (DebugLevel >= 2) console.log('Received local stream.');
         
         // If a different video or audio device has been selected, we need
         // to replace these tracks in streams to to connected peers, also; 
         
         this.forEachConnectedBooth(booth => {
-            console.log("Media device(s) changed: replacing stream for booth " + booth.pin + ".");
+            if (DebugLevel >= 3) console.log("Media device(s) changed: replacing stream for booth " + booth.pin + ".");
             if (booth.mediaConnection.open) {
                 replaceStreamInMediaConnection(booth.mediaConnection, stream);
                 reduceOutstreamBandwidth(
@@ -850,7 +876,7 @@ class Booth {
                 this.audioSource.disconnect();
                 this.audioSourceConnected = false;
             } else {
-                console.log("No booths gain node");
+                console.warn("No booths gain node");
                 
             }
             
@@ -942,11 +968,11 @@ class Booth {
     
     startRecording() {
         if (!this.audioRecorder) {
-            console.log("Booth " + this.pin + " recorder is not initialized.");
+            console.warn("Booth " + this.pin + " recorder is not initialized.");
             return false;
         }
         
-        console.log("Booth " + this.pin + " starts recording.");
+        if (DebugLevel >= 2) console.log("Booth " + this.pin + " starts recording.");
         
         this.audioRecorder.clear();
         this.audioRecorder.start();
@@ -967,12 +993,12 @@ class Booth {
     }
     
     get recorderStatus() {
-        if (DebugMode) console.log("Getting recorder status of booth " + this.pin);                
+        if (DebugLevel >= 2) console.log("Getting recorder status of booth " + this.pin);                
         if (!this.audioRecorder) {
-            console.log("Booth " + this.pin + " recorder is not initialized");
+            console.warn("Booth " + this.pin + " recorder is not initialized");
             return null;
         }
-        if (DebugMode) console.log("Recorder status of booth " + this.pin + " is " + this.audioRecorder.status);
+        if (DebugLevel >= 2) console.log("Recorder status of booth " + this.pin + " is " + this.audioRecorder.status);
 
         return this.audioRecorder.status;
     }
@@ -992,13 +1018,13 @@ class Student extends Connection {
     teacherMuted             = false;
          
     // Callbacks
-    onTeacherMuted      = function(data)   { console.log("Muting teacher's audio");}
-    onTeacherUnmuted    = function(data)   { console.log("Unmuting teacher's audio");}
-    onDataReceived      = function(data)   { console.log("Data received: ", data);}
-    onConnect           = function()       { console.log("Connected");}
-    onDisconnect        = function()       { console.log("Disconnected");}
-    onScreenShareStream = function(stream) { console.log("Screen share stream received", stream); }
-    onScreenShareClose  = function()       { console.log("Screen share stream has been closed"); }
+    onTeacherMuted      = function(data)   { if (DebugLevel >= 2) console.log("Muting teacher's audio");}
+    onTeacherUnmuted    = function(data)   { if (DebugLevel >= 2) console.log("Unmuting teacher's audio");}
+    onDataReceived      = function(data)   { if (DebugLevel >= 2) console.log("Data received");}
+    onConnect           = function()       { if (DebugLevel >= 2) console.log("Connected");}
+    onDisconnect        = function()       { if (DebugLevel >= 2) console.log("Disconnected");}
+    onScreenShareStream = function(stream) { if (DebugLevel >= 2) console.log("Screen share stream received"); }
+    onScreenShareClose  = function()       { if (DebugLevel >= 2) console.log("Screen share stream has been closed"); }
 
     connected() {
         return this.dataConnection && 
@@ -1060,12 +1086,12 @@ class Student extends Connection {
             c.answer(null);
             
             c.on('stream', (stream) => {
-                console.log('Teacher has shared his/her screen');
+                if (DebugLevel >= 2) console.log('Teacher has shared his/her screen');
                 if (typeof this.onScreenShareStream === 'function') this.onScreenShareStream(stream);
             });
 
             c.on('close', () => {
-                console.log('Teacher has unshared his/her screen');
+                if (DebugLevel >= 2) console.log('Teacher has unshared his/her screen');
                 if (typeof this.onScreenShareClose === 'function') this.onScreenShareClose();
             });
             
@@ -1081,7 +1107,7 @@ class Student extends Connection {
     
 
     hangup() {
-        console.log('Logging off');
+        if (DebugLevel >= 2) console.log('Logging off');
         this.dataConnection.send({system: {value: 'hangup'}});
         
         this.teacherVideoElement.srcObject = null;
@@ -1124,10 +1150,10 @@ class Student extends Connection {
             return;
         }
 
-        console.log("Calling teacher " + teacherUserName + (classCode ? ":" + classCode : "") + " (id: " + teacherId + ") using pin " + pin);
-        console.log("this.userName=" + this.userName);
+        if (DebugLevel >= 2) console.log("Calling teacher " + teacherUserName + (classCode ? ":" + classCode : "") + " (id: " + teacherId + ") using pin " + pin);
+        if (DebugLevel >= 3) console.log("this.userName=" + this.userName);
 
-        this.dataConnection = this.peer.connect(teacherId, { metadata: {pin: pin, userName: this.userName, dataPeer: this.peer.peer}, reliable: true, });
+        this.dataConnection = this.peer.connect(teacherId, { metadata: {pin: pin, userName: this.userName, dataPeer: this.peer.peer}, reliable: true, serialization: 'json', });
         
         
         //
@@ -1147,7 +1173,7 @@ class Student extends Connection {
             // called two times: 1 for audio track + 1 for video track
             this.mediaConnection.on('stream', (stream) => {
                 
-console.log("Receiving stream", stream);
+                if (DebugLevel >= 2) console.log("Student is receiving stream" /*, stream*/);
                 
                 reduceOutstreamBandwidth(
                     this.mediaConnection,
@@ -1184,12 +1210,12 @@ console.log("Receiving stream", stream);
                     retry: false,
                     cause: 'mediacall'
                 };
-                console.log("[Student] remote media connection has received an error: " + e);
+                console.warn("[Student] remote media connection has received an error: " + e);
                 if (typeof this.onError === 'function') this.onError(e);                
             });
             
             this.mediaConnection.on('close', () => {
-                console.log("[Student] remote media connection has been closed"); 
+                if (DebugLevel >= 2) console.log("[Student] remote media connection has been closed"); 
                 me.teacherVideoElement.srcObject = null;
             });     
             
@@ -1197,7 +1223,7 @@ console.log("Receiving stream", stream);
 
 
         this.dataConnection.on('open', () => {
-            console.log("Data connection established");
+            if (DebugLevel >= 2) console.log("Data connection established");
             
             if (typeof this.onConnect === 'function') this.onConnect();
             
@@ -1215,18 +1241,18 @@ console.log("Receiving stream", stream);
                             retry: true,
                             cause: 'connect',
                         };
-                        console.log("Connection refused" + err);
+                        console.warn("Connection refused" + err);
                         if (typeof this.onDataCallFail === 'function') this.onDataCallFail(err);
                         this.hangup();
                         break;
                     case 'connection accepted':
-                        console.log("Data connection accepted and established");
+                        if (DebugLevel >= 2) console.log("Data connection accepted and established");
                         if (typeof this.onDataCallOk === 'function') this.onDataCallOk(teacherUserName);
                         handleMediaConnection(); // <=== MEDIA CONNECTION HERE!!!
                         
                         break;
                     case 'logoff':
-                        console.log("Teacher is logging off - session closed");
+                        if (DebugLevel >= 2) console.log("Teacher is logging off - session closed");
                         this.hangup();
                         break;
                     case 'mute teacher':
@@ -1245,7 +1271,7 @@ console.log("Receiving stream", stream);
                     }
                 } else if (data.unshareScreen != null) {
                     // Catches the workaround-message for the mediaConnection close event
-                    console.log('Teacher has unshared his/her screen');
+                    if (DebugLevel >= 2) console.log('Teacher has unshared his/her screen');
                     if (typeof this.onScreenShareClose === 'function') this.onScreenShareClose();
                 }
                 // CALLBACK PER LA GESTIONE DEL PROTOCOLLO?
@@ -1253,7 +1279,7 @@ console.log("Receiving stream", stream);
             });
             
             this.dataConnection.on('close', () => {
-                console.log("[Student] remote data connection has been closed"); 
+                if (DebugLevel >= 2) console.log("[Student] remote data connection has been closed"); 
                 if (typeof this.onDisconnect === 'function') this.onDisconnect();
             });
 
@@ -1265,7 +1291,7 @@ console.log("Receiving stream", stream);
                     retry: false,
                     cause: 'data connection'
                 };
-                console.log("[Student] remote data connection has received an error: " + e);
+                if (DebugLevel >= 2) console.log("[Student] remote data connection has received an error: " + e);
                 if (typeof this.onError === 'function') this.onError(e);
             });
             
@@ -1276,7 +1302,7 @@ console.log("Receiving stream", stream);
 
     setMediaStream(stream) {
 
-        console.log("Setting or replacing local stream");
+        if (DebugLevel >= 2) console.log("Setting or replacing local stream");
     
         
         let micEnabled = true;
@@ -1301,7 +1327,7 @@ console.log("Receiving stream", stream);
         // If a different video or audio device has been selected, we need
         // to replace these tracks in streams to to connected peers, also; 
         if (this.mediaConnection && this.mediaConnection.open) {
-            console.log("Media device(s) changed: replacing stream in teacher's connection.");
+            if (DebugLevel >= 2) console.log("Media device(s) changed: replacing stream in teacher's connection.");
             replaceStreamInMediaConnection(this.mediaConnection, stream);
             
             reduceOutstreamBandwidth(
@@ -1318,17 +1344,19 @@ console.log("Receiving stream", stream);
     }    
 }
 
+function validatePin(pin) {
+    return (/^[0-9]+$/.test(pin));
+}
+
 function validateEmail(mail) {
-    return (/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(mail));
+    return (/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,})+$/.test(mail));
 }
 
 
 function setUserMediaConstraints(onOk = null, onError = null) {
     
-console.log("setUserMediaConstraints: ENTER");
-
+    
     if (window.stream) {
-        console.log("SIAMO QUI");
         window.stream.getTracks().forEach(track => {
             track.stop();
         });
@@ -1337,9 +1365,6 @@ console.log("setUserMediaConstraints: ENTER");
     const videoSource = $('#select-video-source').val();
     const audioSource = $('#select-audio-source').val();
 
-//  console.log("Selected video source: " + videoSource);
-//  console.log("Selected audio source: " + audioSource);
-  
   
     var constraints = LocalCameraConstraints;
 
@@ -1360,7 +1385,7 @@ console.log("setUserMediaConstraints: ENTER");
     //constraints.video.deviceId = videoSource ? {exact: videoSource} : undefined;
     //constraints.audio.deviceId = audioSource ? {exact: audioSource} : undefined;
 
-    console.log("Device constraints: " + JSON.stringify(constraints));
+    if (DebugLevel >= 3) console.log("Device constraints: " + JSON.stringify(constraints));
 
     navigator.mediaDevices.getUserMedia(constraints)
         .then(gotLocalMediaStream)
@@ -1389,7 +1414,7 @@ function reduceOutstreamBandwidth(mediaConnection, vb, vh, ab) {
     // vb = 65536;
     // vh = 60;
     // ab = 65536;
-    console.log('Bandwidth settings: vb:'+vb+'bps, vh:'+vh+'px, ab:'+ab+'bps');
+    if (DebugLevel >= 3) console.log('Bandwidth settings: vb:'+vb+'bps, vh:'+vh+'px, ab:'+ab+'bps');
     
     const pc = mediaConnection.peerConnection;
     
@@ -1425,15 +1450,15 @@ function reduceOutstreamBandwidth(mediaConnection, vb, vh, ab) {
             }            
             
         } else {
-            console.log("Unknown track type: " + sender.track.kind, settings);    
+            if (DebugLevel >= 3) console.log("Unknown track type: " + sender.track.kind, settings);    
             return;
         }
         
         sender.setParameters(parameters).then(() => {
-            console.log("Upstream bandwidth successfully reduced");
+            if (DebugLevel >= 2) console.log("Upstream bandwidth successfully reduced");
         }).catch(e => {
-            console.error(e);
-            console.log("ERR", parameters);
+            console.warn(e);
+            console.warn("Can't set parameters", parameters);
         });
     });
     
@@ -1453,7 +1478,7 @@ function replaceStreamInMediaConnection(conn, stream) {
     if (!conn || typeof conn !== 'object' || !conn.open) return false;
     if (!stream || typeof stream !== 'object') return false;
 
-    console.log("Replacing stream in media conection to [peer:" + conn.peer +  "]");
+    if (DebugLevel >= 3) console.log("Replacing stream in media conection to [peer:" + conn.peer +  "]");
 
 //  console.log("V: " + stream.getVideoTracks().length);    
 //  console.log("A: " + stream.getAudioTracks().length);    
@@ -1471,9 +1496,9 @@ function replaceStreamInMediaConnection(conn, stream) {
             if (sender) {
                 track.enabled = sender.track.enabled; // Preserve enabled status of track
                 sender.replaceTrack(track); // Replace track
-                console.log('Replaced ' + track.kind + ' track.');
+                if (DebugLevel >= 3) console.log('Replaced ' + track.kind + ' track.');
             } else {
-                console.log('No ' + track.kind + ' track found.');
+                if (DebugLevel >= 2) console.log('No ' + track.kind + ' track found.');
             }
         });
     }) ();
