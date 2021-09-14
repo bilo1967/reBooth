@@ -64,7 +64,7 @@ async function getDevices(deviceInfos = null) {
 //
 async function updateDeviceList(deviceList = null, deviceSelector, type = 'videoinput', onError = null) {
 
-    if (typeof onError !== 'function') onError = (error) => { console.log('Cannot get device list:', error.message, error.name); };
+    if (typeof onError !== 'function') onError = (error) => { console.error('Cannot get device list:', error.message, error.name); };
 
     try {
         if (deviceList === null) deviceList = await navigator.mediaDevices.enumerateDevices();
@@ -90,7 +90,7 @@ async function updateDeviceList(deviceList = null, deviceSelector, type = 'video
                 deviceSelector.appendChild(option)
             } else {
                 // Other kind of device
-                console.log(e.kind);
+                //console.log(e.kind);
             }
         });
         
@@ -116,7 +116,7 @@ function attachSinkId(element, sinkId) {
     if (typeof element.sinkId !== 'undefined') {
         element.setSinkId(sinkId)
             .then(() => {
-            console.log(`Success, audio output device attached: ${sinkId}`);
+                if (DebugLevel >= 3) console.log(`Success, audio output device attached: ${sinkId}`);
             })
             .catch(error => {
                 let errorMessage = error;
