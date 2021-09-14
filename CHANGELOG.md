@@ -1,7 +1,7 @@
 ## [v0.8.3]
-Many minor fixes
-File manager content syncronization between concurrent sessions
-Regression fixed on session timeout handling
+Many minor fixes.
+File manager content syncronization between concurrent sessions.
+Regression fixed on session timeout handling.
 
 ## [v0.8.2]
 Enhanced session timeout 
