@@ -71,7 +71,7 @@
   
   <script src="js/rebooth-file-manager.js?0.05"></script>
 
-  <script src="js/common.js?0.00"></script>
+  <script src="js/common.js?0.01"></script>
 
 
 
@@ -246,7 +246,7 @@ class SessionToken {
     
     constructor() {
         this.token = getPins(1, 10)[0];
-        console.log("Session token is: " + this.token);
+        if (DebugLevel >= 2) console.log("Session token is: " + this.token);
     }
     
     addMember(m) {
@@ -274,14 +274,14 @@ class SessionToken {
             dataType: "json",
         }).done((d) => {
             if (d.Result == "OK") {
-                console.log("Session token has been set to " + this.token);
+                if (DebugLevel >= 2) console.log("Session token has been set to " + this.token);
             } else {
                 // ERROR
-                console.warn("Could not set the session token", d);
+                console.error("Could not set the session token", d);
             }
         }).fail(e => {
             // ERROR
-            console.log(e);
+            console.error(e);
         });
     }
     
@@ -297,14 +297,14 @@ class SessionToken {
             dataType: "json",
         }).done((d) => {
             if (d.Result == "OK") {
-                console.log("Session token has been unset");
+                if (DebugLevel >= 2) console.log("Session token has been unset");
             } else {
                 // ERROR
                 console.warn("Could not unset the session token", d);
             }
         }).fail(e => {
             // ERROR
-            console.log(e);
+            console.error(e);
         });
 
     }
@@ -324,6 +324,9 @@ class SessionToken {
 $(document).ready(function() {
 
     recordingIds = new SessionIdGenerator(RecIdPrefix);
+    
+    
+    keepAliveSession(); // keep alive PHP session 
 
     // Bootstrap custom tooltips
     $('[data-tooltip="tooltip"]').tooltip(); 
@@ -336,6 +339,11 @@ $(document).ready(function() {
     $('label[for=file-upload]').text("Choose file (" + AllowedMediaFileExtensions.join(', ') + ")");
    
     loadClock();
+
+    // Define local camera and microphone selectors
+    setDeviceSelector($('#select-video-source').get(0), 'videoinput');  // select box for video source devices
+    setDeviceSelector($('#select-audio-source').get(0), 'audioinput');  // select box for audio source devices
+    setDeviceSelector($('#select-audio-output').get(0), 'audiooutput'); // select box for audio output devices
 
     bootbox.alert({
         centerVertical: true,
@@ -452,14 +460,16 @@ $(document).ready(function() {
     });
 
     if (DebugMode) {
-        let d = new Date();
-        saveLog = "[" + d.toTimeStamp() + "] " + AppName + " " + AppVersion + " teacher log console redirection enabled\n";
-        redirectConsole();        
+       var init = "\n[" + (new Date()).toTimeStamp() + "] " + AppName + " " + AppVersion + " teacher log console redirection enabled\n";
+
+        redirectConsole(init, logToServer);
     }
     
     $('.download-log-link').on('click', function(e) {
-        this.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(saveLog));
-        this.setAttribute('download', 'log.txt');
+        if (debugMode) {
+            this.setAttribute('href', 'data:text/plain;charset=utf-8,' + console.get());
+            this.setAttribute('download', 'log.txt');
+        }
     });
     
     
@@ -510,20 +520,13 @@ $(document).ready(function() {
     //    $('.clearer').clearer();
     //});
     
-
-    // Load local camera and microphone selectors
-    setDeviceSelector($('#select-video-source').get(0), 'videoinput');  // select box for video source devices
-    setDeviceSelector($('#select-audio-source').get(0), 'audioinput');  // select box for audio source devices
-    setDeviceSelector($('#select-audio-output').get(0), 'audiooutput'); // select box for audio output devices
-
-    
    
     
     function addBoothElem(pin, n, email) {
     
-        let invitationLink = boothURL + "?pin=" + pin + "&t=" + userName + (classCode != '' ? '&c='+classCode : '') + "&s=" + email;
-        
         if (email == "" || typeof email == 'undefined') email = "student@booth.n" + n;
+    
+        let invitationLink = boothURL + "?pin=" + pin + "&t=" + userName + (classCode != '' ? '&c='+classCode : '') + "&s=" + email;
     
         // Clono il div prototipo della cabina e lo aggiungo al pannello delle connessioni
         var elem = $('#connection-prototype')
@@ -541,6 +544,7 @@ $(document).ready(function() {
         
         $('#booth-'+pin+" .card-header").prop('id', 'booth-header-' + pin).data('ord', n);
         $('#booth-'+pin+" .booth-name").prop('id', 'booth-name-' + pin).html("Booth n&#186; " + n);
+        
         $('#booth-'+pin+" .invitation-link")
             .prop('id', 'invitation-link-' + pin)
             .data('invitation-link', invitationLink)
@@ -579,7 +583,7 @@ $(document).ready(function() {
                 
             booths.push({pin: pin, videoElement: $('#booth-video-' + pin)[0]});
 
-            console.log("Added booth " + pin + " for " + email);
+            if (DebugLevel >= 2) console.log("Added booth " + pin + " for " + email);
             
             i++;
         });
@@ -613,7 +617,7 @@ $(document).ready(function() {
         
         me.addBooth(newpin, $('#booth-video-' + newpin)[0]);
         
-        console.log("Added a booth with PIN: " + newpin);
+        if (DebugLevel >= 2) console.log("Added a booth with PIN: " + newpin);
         
     });
     
@@ -633,10 +637,18 @@ $(document).ready(function() {
                 boothsGainNode: boothsGain,
                 videoElement: $('#teacher-video')[0],
                 // starting connection - prepare interface
+                onBoothICEConnected: (pin, who) => {
+                    $('#booth-'+pin+" .booth-connection").html('').css('background-color', 'transparent');
+                },
+                onBoothICEDisconnected: (pin, who) => {
+                    $('#booth-'+pin+" .booth-connection")
+                    .css('background-color', 'rgba(0, 0, 0, 0.5)')
+                    .html('<div class="fa-5x text-light absolute-middle"><i class="fas fa-circle-notch fa-spin"></i></div>');
+                },
                 onBoothConnect: (pin, who) => {
                 
                     let d = new Date();
-                    console.log(pin + " " + who + " has joined the class");
+                    if (DebugLevel >= 2) console.log(pin + " " + who + " has joined the class");
                     appendLog(who + " has joined the class (" + d.toTimeStamp() + ")");
                     
                     $('#booth-header-' + pin).removeClass('bg-info').addClass('bg-primary');
@@ -644,6 +656,8 @@ $(document).ready(function() {
                     
                     $('#booth-'+pin+" .take-snapshot").addClass('cursor-pointer');
                     $('#booth-'+pin+" .kick-out").addClass('cursor-pointer').removeClass('disabled');
+                    
+                    $('#booth-'+pin+" .booth-connection").html('').css('background-color', 'transparent');
                     
                     me.send(pin, {sessionToken: {value: sessionToken.get()}});
                     
@@ -653,7 +667,7 @@ $(document).ready(function() {
                 // Connection completed
                 onBoothConnected: (pin, who) => {
                 
-                    console.log("Booth " + pin + " connection completed");
+                    if (DebugLevel >= 2) console.log("Booth " + pin + " connection completed");
                     
                     me.shareScreenToBooth(pin); // Safe to do even if we're not actually sharing the screen
                     
@@ -692,6 +706,9 @@ $(document).ready(function() {
                     $('#booth-'+pin+' .talk-to-booth-indicator').removeClass('spinner-grow');
                     
                     $('#booth-'+pin+' .talk-to-booth').addClass('disabled');
+                    
+                    $('#booth-'+pin+" .booth-connection").html('').css('background-color', 'transparent');
+                    
 /*                    
                     $('#booth-'+pin+' .talk-to-booth')
                         .removeClass('active')
@@ -699,7 +716,7 @@ $(document).ready(function() {
                         .addClass('active');
 */                    
                     let d = new Date();
-                    console.log(pin + " " + who + " disconnected");
+                    if (DebugLevel >= 2) console.log(pin + " " + who + " disconnected");
                     appendLog(who + " disconnected (" + d.toTimeStamp() + ")");
 
                 },
@@ -713,7 +730,7 @@ $(document).ready(function() {
                             me.forEachConnectedBooth(booth => {
                                 if (booth.pin != pin) {
                                     booth.send({chat: {pin: pin, who: who, text: data.chat.text}});
-                                    console.log("Sending a chat message from " + pin + " to " + pin);                                
+                                    if (DebugLevel >= 2) console.log("Sending a chat message from " + pin + " to " + pin);                                
                                 }
                             });
                         }
@@ -794,14 +811,14 @@ $(document).ready(function() {
                         });
                     } else if (data.snapshot) {
                     
-                        console.log("SNAPSHOT IN ARRIVO?");
+console.log("SNAPSHOT IN ARRIVO?");
                         downloadDataURL(data.snapshot.parameters.url, data.snapshot.parameters.filename);
                     
                     } else if (data.system) {
                         switch (data.system.value) {
                             case 'hangup':
                                 let d = new Date();
-                                //console.log(pin + " " + who + " has left the class");
+                                if (DebugLevel >= 2) console.log(pin + " " + who + " has left the class");
                                 appendLog(who + " has left the class (" + d.toTimeStamp() + ")");
                                 break;
                         }
@@ -814,7 +831,7 @@ $(document).ready(function() {
         );
     } // End of init teacher function
 
-
+    var boothPRS = {};
     $(document).on('info-feedback', (event, data) => {
         //let timestamp = data.timeStamp;
         let action = data.action;
@@ -833,6 +850,23 @@ $(document).ready(function() {
         } else if (pf == 'none') {
             pf = '<em>' + pf + '</em>';
         }
+        
+        if (DebugLevel >= 2) {
+            let f = params.playerFile ? params.playerFile : "none"; 
+            
+            // We don't want to flood the logs so we keep track of the player and
+            // recorder status for each booth. When they switch to "paused" and "inactive"
+            // we stop logging
+            if (boothPRS[pin] === undefined) boothPRS[pin] = {recorder: null, player: null, file: null };
+            if (boothPRS[pin].recorder != 'inactive' || boothPRS[pin].player != 'paused' && boothPRS[pin].player != 'stopped' || boothPRS[pin].file != f ) {
+                console.log("Booth #" + pin + " status:" +
+                            " recorder=[" + rs + "|" + rt + "]" +
+                            " player=[" + f + "|" + ps + "|" + pt + "]");
+            }
+            boothPRS[pin].recorder = rs;
+            boothPRS[pin].player = ps;
+            boothPRS[pin].file = f;
+        }
 
         $('#booth-status-'+pin+">td.booth-player-status").html(pf+' ('+ps+': '+pt+')');
         $('#booth-status-'+pin+">td.booth-recorder-status").html(rs+': '+rt);
@@ -845,7 +879,7 @@ $(document).ready(function() {
     $('#share-screen').on('click', () => {
     
         if (me.sharingScreen()) {
-            console.log("Teacher asked to stop sharing the screen");
+            if (DebugLevel >= 2) console.log("Teacher asked to stop sharing the screen");
             me.unshareScreen();
             $('#share-screen > i').removeClass('fa-blink');
         } else {
@@ -853,13 +887,13 @@ $(document).ready(function() {
             navigator.mediaDevices
                 .getDisplayMedia(ScreenShareConstraints)
                 .then(stream => {
-                    console.log('Screen, application or browser tab has been shared');
+                    if (DebugLevel >= 2) console.log('Screen, application or browser tab has been shared');
                     
                     $('#share-screen > i').addClass('fa-blink');
                     animateCSS('#send-chat-text', 'heartBeat');
                     
                     stream.getVideoTracks()[0].onended = () => {
-                        console.log('Sharing screen ended');  
+                        if (DebugLevel >= 2) console.log('Sharing screen ended');  
                         me.unshareScreen();
                         $('#share-screen > i').removeClass('fa-blink');
                     }
@@ -908,18 +942,18 @@ $(document).ready(function() {
         $('#audio-player').off('ended.sim');
         $('#audio-player').off('ended.con');
 
-        console.log("Batch cleared");
+        if (DebugLevel >= 2) console.log("Batch cleared");
         appendLog("Batch cleared");
 
     }
     
     pauseBatch = () => {
-        console.log("Pause batch");
+        if (DebugLevel >= 2) console.log("Pause batch");
         if (batchChrono) batchChrono.pause();
     }
     
     resumeBatch = () => {
-        console.log("Resume batch");
+        if (DebugLevel >= 2) console.log("Resume batch");
         if (batchChrono) batchChrono.resume();
     }
 
@@ -930,7 +964,7 @@ $(document).ready(function() {
         // type contains the event target id (simultaneous-batch, consecutive-batch)
         let type = (e.target.id == 'simultaneous-batch' ? 'SIM' : 'CON');
         
-        console.log("Trying to start a " + type + " batch");
+        if (DebugLevel >= 2) console.log("Trying to start a " + type + " batch");
     
         // check if there's any booth connected 
         // and verify if they've loaded
@@ -970,7 +1004,7 @@ $(document).ready(function() {
 
 
         if (err) {
-            console.log("The " + type + " batch cannot be started: " + t);
+            if (DebugLevel >= 2) console.log("The " + type + " batch cannot be started: " + t);
             bootbox.alert({
                 centerVertical: true,
                 title: t,
@@ -979,7 +1013,7 @@ $(document).ready(function() {
             return;
         }
         
-        console.log("Scheduling a " + type + " batch...");
+        if (DebugLevel >= 2) console.log("Scheduling a " + type + " batch...");
         appendLog("Scheduling a " + type + " batch...");
 
         
@@ -1005,11 +1039,11 @@ $(document).ready(function() {
                 },
                 callback: function (result) {
                     if (result === null) {
-                        console.log("Batch of type " + type + " aborted");
+                        if (DebugLevel >= 2) console.log("Batch of type " + type + " aborted");
                         appendLog("Batch of type " + type + " aborted");
                         return;
                     }
-                    console.log("Batch of type " + type + " started");
+                    if (DebugLevel >= 2) console.log("Batch of type " + type + " started");
                     appendLog("Batch of type " + type + " started");
                     
                     result = parseInt(result) || 0;
@@ -1018,11 +1052,11 @@ $(document).ready(function() {
                     
                     batchDuration = duration + result;
                     
-                    console.log("Batch in progress: triggering recorder start command");
+                    if (DebugLevel >= 2) console.log("Batch in progress: triggering recorder start command");
                     $('#recorder-start').trigger('click');
 
 
-                    console.log("Batch in progress: scheduling the batch on all booths");
+                    if (DebugLevel >= 2) console.log("Batch in progress: scheduling the batch on all booths");
                     me.sendToAll({
                         batch: {
                             action: "simultaneous", 
@@ -1056,7 +1090,7 @@ $(document).ready(function() {
                     });
                     
                     // Delay 1s audio player
-                    console.log("Batch in progress: triggering player start command (1s delay)");
+                    if (DebugLevel >= 2) console.log("Batch in progress: triggering player start command (1s delay)");
                     setTimeout(() => {
                         $('#audio-player-play').trigger('click');
                         batchChrono.start()
@@ -1068,13 +1102,13 @@ $(document).ready(function() {
                     
                     
                     // Append an event handler for the "onended" of the player
-                    console.log("Batch in progress: appending 'onended' event handler for current track");
+                    if (DebugLevel >= 3) console.log("Batch in progress: appending 'onended' event handler for current track");
                     $('#audio-player').on('ended.sim', function() {
 
-                        console.log("Batch in progress: the audio track is over. Recording for " + result + " more seconds.");
+                        if (DebugLevel >= 2) console.log("Batch in progress: the audio track is over. Recording for " + result + " more seconds.");
                     
                         batchTimeout = setTimeout(() => {
-                            console.log("Batch in progress: triggering a recorder stop command");
+                            if (DebugLevel >= 2) console.log("Batch in progress: triggering a recorder stop command");
                             $('#recorder-stop').trigger('click');
                         }, result*1000);
                     });
@@ -1098,11 +1132,11 @@ $(document).ready(function() {
                 },
                 callback: function (result) {
                     if (result === null) {
-                        console.log("Batch of type " + type + " aborted");
+                        if (DebugLevel >= 2) console.log("Batch of type " + type + " aborted");
                         appendLog("Batch of type " + type + " aborted");
                         return;
                     }
-                    console.log("Batch of type " + type + " started");
+                    if (DebugLevel >= 2) console.log("Batch of type " + type + " started");
                     appendLog("Batch of type " + type + " started");
 
                     
@@ -1119,7 +1153,7 @@ $(document).ready(function() {
                     Cookies.set('consecutive-batch-delay', result, { expires: 365 });
 
                     
-                    console.log("Batch in progress: scheduling the batch on all booths");
+                    if (DebugLevel >= 2) console.log("Batch in progress: scheduling the batch on all booths");
                     me.sendToAll({
                         batch: {
                             action: "consecutive", 
@@ -1154,17 +1188,17 @@ $(document).ready(function() {
                     });
                     
                     // Start audio player
-                    console.log("Batch in progress: triggering a player start command");
+                    if (DebugLevel >= 2) console.log("Batch in progress: triggering a player start command");
                     $('#audio-player-play').trigger('click');
                     
                     $('#batch-type').html('Consecutive');
                     $('#batch-display').removeClass('hide');
                     
                     // Append an event handler for the "onended" of the player
-                    console.log("Batch in progress: appending 'onended' event handler for current track");
+                    if (DebugLevel >= 3) console.log("Batch in progress: appending 'onended' event handler for current track");
                     $('#audio-player').on('ended.con', function() {
                     
-                        console.log("Batch in progress: the audio track is over. Recording will start delayed by 1s");
+                        if (DebugLevel >= 2) console.log("Batch in progress: the audio track is over. Recording will start delayed by 1s");
                     
                         // Delay 1s audio recorder
                         
@@ -1172,11 +1206,11 @@ $(document).ready(function() {
                         
                             batchChrono.start();
 
-                            console.log("Batch in progress: triggering recorder start command. The recording will be automatically stopped after " + batchDuration + "s");                            
+                            if (DebugLevel >= 2) console.log("Batch in progress: triggering recorder start command. The recording will be automatically stopped after " + batchDuration + "s");                            
                             $('#recorder-start').trigger('click');
                             
                             batchTimeout = setTimeout(() => {
-                                console.log("Batch in progress: triggering a recorder stop command");
+                                if (DebugLevel >= 2) console.log("Batch in progress: triggering a recorder stop command");
                                 $('#recorder-stop').trigger('click');
                             }, batchDuration * 1000);
                         
@@ -1200,7 +1234,7 @@ $(document).ready(function() {
 
     // Reload device list when the config button is clicked    
     $('#config-button, #refresh-devices').on('click', function() {
-        console.log("enumerating devices");
+        if (DebugLevel >= 3) console.log("enumerating devices");
         getDevices()
             .then(() => { 
                 
@@ -1232,21 +1266,6 @@ $(document).ready(function() {
         
     // setUserMediaConstraints();
 
-    $('#load-class').on('click', function() {
-        invitations = null;
-        invitations = [
-            {pin: '12345', email: 'tizio@grr.la'},
-            {pin: '23451', email: 'caio@grr.la'},            
-            {pin: '34512', email: 'sempronio@grr.la'}
-        ];
-        initBooths();
-        initTeacher();
-
-        //
-        // save invitations to session
-        //
-    
-    });
 
     $(document).on('player-feedback', (event, data) => {
         let timestamp = event.timeStamp;
@@ -1258,19 +1277,25 @@ $(document).ready(function() {
         
         switch (action) {
         case 'ready':
-            console.log("Asking all booths to load file '" + file + "'");
+            if (DebugLevel >= 2) console.log("Asking all booths to load file '" + file + "'");
             me.sendToAll({player: {action: "load", parameters: {teacher: userName, file: file, crc: crc}}});
+            
+            $('.booth-mini-log').html();
+            
+            me.forEachConnectedBooth(booth => {
+                $('#booth-'+booth.pin+' .booth-mini-log').html('&nbsp;<i class="fas fa-spinner fa-pulse"></i>');
+            })
             break;
         case 'play':
-            console.log("Asking all booths to play file '" + file + "'");
+            if (DebugLevel >= 2) console.log("Asking all booths to play file '" + file + "'");
             me.sendToAll({player: {action: "play", parameters: {teacher: userName, file: file}}});
             break;
         case 'pause':
-            console.log("Asking all booths to pause file '" + file + "'");
+            if (DebugLevel >= 2) console.log("Asking all booths to pause file '" + file + "'");
             me.sendToAll({player: {action: "pause", parameters: {teacher: userName, file: file}}});
             break;
         case 'stop':
-            console.log("Asking all booths to stop file '" + file + "'");
+            if (DebugLevel >= 2) console.log("Asking all booths to stop file '" + file + "'");
             me.sendToAll({player: {action: "stop", parameters: {teacher: userName, file: file}}});
             break;
         }
@@ -1282,7 +1307,7 @@ $(document).ready(function() {
         let timestamp = event.timeStamp;
         let teacher = userName;
 
-        console.log("Recording ID is " + recordingIds.id);
+        if (DebugLevel >= 2) console.log("Recording ID is " + recordingIds.id);
         
         let parameters = {
             teacher: userName, 
@@ -1295,20 +1320,20 @@ $(document).ready(function() {
 //          me.sendToAll({recorder: {action: "save", parameters: {teacher: userName, session: session}}});
 //          break;
         case 'record':
-            console.log("Recorder: record");
+            if (DebugLevel >= 2) console.log("Recorder: record");
             // New session id
             me.sendToAll({recorder: {action: "record",        parameters: parameters}});
             break;
         case 'pause':
-            console.log("Recorder: pause");
+            if (DebugLevel >= 2) console.log("Recorder: pause");
             me.sendToAll({recorder: {action: "pause",         parameters: parameters}});
             break;
         case 'resume':
-            console.log("Recorder: resume");
+            if (DebugLevel >= 2) console.log("Recorder: resume");
             me.sendToAll({recorder: {action: "resume",        parameters: parameters}});
             break;
         case 'stop-and-save':
-            console.log("Recorder: stop and save");
+            if (DebugLevel >= 2) console.log("Recorder: stop and save");
             me.sendToAll({recorder: {action: "stop-and-save", parameters: parameters}});
             break;
         }
@@ -1342,12 +1367,12 @@ $(document).ready(function() {
                         }
                     }).fail( (e) => {
                         // NEITHER HERE
-                        console.log(e);
+                        console.error(e);
                     });
                 },
                 1000
             );
-            console.log("Recording from booth " + pin + " (" + who + ") + as '" + file + "'");
+            if (DebugLevel >= 2) console.log("Recording from booth " + pin + " (" + who + ") + as '" + file + "'");
             appendLog("Recording from booth " + pin + " (" + who + ") has been uploaded to the server as '" + file + "'");
             break;
         default:
@@ -1371,26 +1396,26 @@ $(document).ready(function() {
             me.getBooth(pin).registry.file = file;
             me.getBooth(pin).registry.crc = crc;
             
-            console.log("Booth " + pin + " (" + who + ") ready to play '" + file + "'");
+            if (DebugLevel >= 2) console.log("Booth " + pin + " (" + who + ") ready to play '" + file + "'");
             $('#booth-' + pin + " .booth-mini-log").html('<i class="fas fa-hand-point-right"></i>&nbsp;' + file);
             break;
         case 'started':
-            console.log("Booth " + pin + " (" + who + ") has started playing '" + file + "'");
+            if (DebugLevel >= 2) console.log("Booth " + pin + " (" + who + ") has started playing '" + file + "'");
             break;
         case 'paused':
-            console.log("Booth " + pin + " (" + who + ") has paused '" + file + "'");
+            if (DebugLevel >= 2) console.log("Booth " + pin + " (" + who + ") has paused '" + file + "'");
             break;
         case 'ended':
-            console.log("Booth " + pin + " (" + who + ") has ended playing '" + file + "'");
+            if (DebugLevel >= 2) console.log("Booth " + pin + " (" + who + ") has ended playing '" + file + "'");
             break;
         case 'error':
             break;
         case 'crc-error':
             $('#booth-' + pin + " .booth-mini-log").html('<b><i class="fas fa-exclamation-triangle"></i>&nbsp;UPLOAD FAILED. PLEASE TRY AGAIN</b>');
-            console.log("Booth " + pin + " (" + who + ") file '" + file + "' is corrupt");
+            console.warn("Booth " + pin + " (" + who + ") file '" + file + "' is corrupt");
             break;
         case 'http-error':
-            console.log("Booth " + pin + " (" + who + "): HTTP error '" + mesg + "' loading file '" + file + "'");
+            console.error("Booth " + pin + " (" + who + "): HTTP error '" + mesg + "' loading file '" + file + "'");
             break;
         }
     });
@@ -1441,7 +1466,7 @@ $(document).ready(function() {
             },
             (err) => { 
                 appendLog(err);
-                console.log("Logon error: " + err);
+                console.warn("Logon error: " + err);
                 $('#logoff').removeClass('disabled');
                 $('#logon').removeClass('disabled');
                 $('#logoff').addClass('disabled');
@@ -1545,10 +1570,10 @@ $(document).ready(function() {
                     setBandwidthProfile(profile);
                     setUserMediaConstraints(handleMediaSuccess, handleMediaErrors);  
                     me.sendToAll({ profile: { value: profile}});
-                    console.log('Changing bandwidth profile to ' + profile);
+                    if (DebugLevel >= 2) console.log('Changing bandwidth profile to ' + profile);
                     break;
                 case 'beta':
-                    console.log('Turning beta features on');
+                    if (DebugLevel >= 2) console.log('Turning beta features on');
                     $('.beta-features').removeClass('beta-features');
                     break; 
                 }
@@ -1580,7 +1605,7 @@ $(document).ready(function() {
     
     
     $('#recorder-stop').on('click', function(e) {
-        console.log("Record stop clicked");
+        if (DebugLevel >= 2) console.log("Record stop clicked");
         e.preventDefault();
         
         clearBatch();
@@ -1596,7 +1621,7 @@ $(document).ready(function() {
         
         recorderChrono.stop(); // stop timer            
         
-        console.log("Stop recording");
+        if (DebugLevel >= 2) console.log("Stop recording");
 //      $("#recorder-start > i").removeClass("fa-square").addClass("fa-circle");
 
 
@@ -1631,7 +1656,7 @@ $(document).ready(function() {
             
             var blobPromises = [];
             
-            console.log("Collecting recordings");
+            if (DebugLevel >= 2) console.log("Collecting recordings");
             
             boothsRecording.forEach(pin => { 
                 
@@ -1658,7 +1683,7 @@ $(document).ready(function() {
 
                 zip.generateAsync({type:"blob"}).then( function(contents) { 
                 
-                    console.log('Generating ZIP download link. Blob size is ' + contents.size);
+                    if (DebugLevel >= 2) console.log('Generating ZIP download link. Blob size is ' + contents.size);
                 
                     var url = window.URL.createObjectURL(contents);
                 
@@ -1684,7 +1709,7 @@ $(document).ready(function() {
 
         } else {
             appendLog("No one is recording");
-            console.log("No one is recording");
+            if (DebugLevel >= 2) console.log("No one is recording");
             $("#recorder-save > i").removeClass("fa-sync fa-cog fa-spin").addClass("fa-save"); 
             $("#recorder-save").removeClass("disabled").addClass("disabled");
             $("label[for='recorder-save']").html("Save audio");
@@ -1696,7 +1721,7 @@ $(document).ready(function() {
     
     $('#recorder-start').on('click', function(e) {
     
-        console.log("Record start clicked");
+        if (DebugLevel >= 2) console.log("Record start clicked");
         e.preventDefault();
 
         // Start recording
@@ -1705,7 +1730,7 @@ $(document).ready(function() {
         $('#recorder-stop').removeClass('disabled');
         
     
-        console.log("Start recording");
+        if (DebugLevel >= 2) console.log("Start recording");
         
         // Disable download buttons and clear recording download link on booths
         $('.download-booth-recording').removeClass('disabled').addClass('disabled').attr('href', '#');
@@ -1726,10 +1751,10 @@ $(document).ready(function() {
 
         if (!alive) {
             appendLog("No one is connected");
-            console.log("No one is connected");
+            if (DebugLevel >= 2) console.log("No one is connected");
             return false;
         }
-        console.log("Recording started in " + alive + " connected booths");
+        if (DebugLevel >= 2) console.log("Recording started in " + alive + " connected booths");
 
         
         recording = true;
@@ -1748,7 +1773,7 @@ $(document).ready(function() {
         if ($(this).hasClass('disabled')) {
             e.preventDefault();
         } else {
-            console.log("Save audio file");
+            if (DebugLevel >= 2) console.log("Save audio file");
         }
     });    
 
@@ -1764,18 +1789,61 @@ $(document).ready(function() {
     // Copy contents of log board to clipboard
     $('#log-board').on('click', function() {
         animateCSS('#log-board-container', "bounce");
-        let t = "User log board:\n\n";
+        let t = "";
+
+        t += "<p><h4>Class info</h4>\n\n";
+        t += "<span>Teacher: <b>" + userName + "</b></span><br/>\n";
+        t += "<span>Class code: "+ (classCode ? "<b>" + classCode + "</b>": "<i>not set</i>") + "</span><br/>\n";
+        t += "</p>\n\n";
+
+        t += "<p><h4>Booths info</h4>\n<ul>\n";
         
+        me.forEachBooth(booth => {
+            let pin = booth.pin;
+            let who = booth.who;
+            let status = null;
+            if (booth.connected()) {
+                who = booth.who;
+                status = 'connected';    
+            } else {
+                // if booth is not connected it has not yet declared its email adress
+                // so we get it from its own html element
+                who = $('#booth-' + pin).data('who');
+                status = 'not connected';
+            }
+            t += "<li>" + who + " (pin "  +  pin + "): " + status + "</li>\n";
+        });
+        
+        t += "</ul></p>\n\n";
+        
+        t += "<p><h4>Device setup info</h4>\n<ul>\n";
+        
+        let vs = $("#select-video-source option:selected").text() || $("#select-video-source option:first").text();
+        let as = $("#select-audio-source option:selected").text() || $("#select-audio-source option:first").text();
+        let ao = $("#select-audio-output option:selected").text() || $("#select-audio-output option:first").text();
+        
+        t += "<li>Video source: </b>" + vs + "</b></li>\n";
+        t += "<li>Audio source: </b>" + as + "</b></li>\n";
+        t += "<li>Audio output: </b>" + ao + "</b></li>\n";
+        t += "<li>Audio mode: </b>" + $("#select-audio-mode   option:selected").text() + "</b></li>\n";
+        t += "<li>Recording mode: </b>" + $("#select-record-mode  option:selected").text() + "</b></li>\n";
+        
+        t += "</ul></p>\n\n";
+        
+        t += "<p><h4>Session log</h4>\n\n";
+        t += "<pre>";
         $(this).children().each(function() {
             t +=  $(this).text() + "\n";
         });
+        t += "</pre></p>\n\n";
+
         if (DebugMode) {
-            t += "\n=========================================\n\n";
-            t += "Browser log console output:\n\n";
-            t += saveLog;
+            t += "<p><h4>Developer log</h4>\n\n<pre>"
+            t += console.get();
+            t += "</pre>\n</p>\n";
         }
         
-        copyTextToClipboard(t);
+        copyTextToClipboard(t, true);
     });
 
     
@@ -1795,6 +1863,8 @@ $(document).ready(function() {
                 parameters: { value: v ? 'class call' : false }
             }
         });
+        
+        $(".talk-to-booth").prop("title", v ? "Give the floor to this booth" : "Talk to the booth");
 
         if ($('#class-call').hasClass('active') === v) return;
         $('#class-call').trigger('click');
@@ -1813,15 +1883,17 @@ $(document).ready(function() {
         });
 */    
         $(this).button('toggle');
+
         if ($(this).hasClass('active')) {
         
             me.sendToAll({info: { action: 'set-teacher-label', parameters: { value: 'class call' }} });
+            $(".talk-to-booth").prop("title", "Give the floor to this booth");
 
 $(".booth-signal").html('<i class="fas fa-bullhorn fa-2x" style="color: yellow"></i>');
         
             $(this).find('i').addClass('fa-blink-3x');
             me.unmuteSelf();
-            console.log('Class call activated');
+            if (DebugLevel >= 2) console.log('Class call activated');
             classCall = true;
             $('.booth-video').css('pointer-events', 'none');
 //          $('.talk-to-booth').addClass('disabled');            
@@ -1830,12 +1902,13 @@ $(".booth-signal").html('<i class="fas fa-bullhorn fa-2x" style="color: yellow">
             me.stopBoothBroadcast();
         
             me.sendToAll({ info: { action: 'set-teacher-label', parameters: { value: false }}});
+            $(".talk-to-booth").prop("title", "Talk to the booth");
 
 $(".booth-signal").html("");            
             
             $(this).find('i').removeClass('fa-blink-3x');
             me.muteSelf();
-            console.log('Class call ended');
+            if (DebugLevel >= 2) console.log('Class call ended');
             classCall = false;
             $('.booth-video').css('pointer-events', 'auto');
 //          $('.talk-to-booth').removeClass('disabled');
@@ -1922,11 +1995,11 @@ $(".booth-signal").html("");
                     centerVertical: true,
                 });
             
-                console.log(d.Message);
+                console.warn(d.Message);
             }
         }).fail( (e) => {
             // SHOULD NEVER GET HERE
-            console.log(e);
+            console.error(e);
         });    
     });
     
@@ -1937,7 +2010,7 @@ $(".booth-signal").html("");
             
             const blob = new Blob([ file ], { type: file.type });
             
-            console.log("Sending file '" + file.name + "'");
+            if (DebugLevel >= 2) console.log("Sending file '" + file.name + "'");
             
             let fd = new FormData();
             fd.append('file', blob, file.name);            
@@ -1971,7 +2044,7 @@ $(".booth-signal").html("");
 
             }).fail(e => {
                 // ERROR
-                console.log(e);
+                console.error(e);
             });            
             
             //datachannel.send({
@@ -2291,6 +2364,72 @@ function dragElement(id) {
 
 
 
+function logToServer(timeStamp, logLevel, script, line, column, log) {
+
+    if (!DebugMode || !DebugToServer) return;
+
+    let fd = new FormData();
+    fd.append('teacher', userName);
+    fd.append('classCode', classCode);
+    fd.append('timeStamp', timeStamp);
+    fd.append('logLevel', logLevel);
+    fd.append('script', script);
+    fd.append('line', line);
+    fd.append('column', column);
+    fd.append('log', log);
+
+    $.ajax({
+        type: 'POST',
+        url: '/actions/session-log',
+        data: fd,
+        processData: false,
+        contentType: false,
+        dataType: "json",
+    }).done((d) => {
+        if (d.Result != "OK") {
+            // ERROR
+            appendLog(d.Message, "log-item-error");
+            
+            console.owarn("Can't upload log: " + d.Message);
+        }
+
+    }).fail(e => {
+        // ERROR
+        console.oerror("Something else went wrong", e);
+    });
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 </script>
 
@@ -2322,10 +2461,10 @@ function dragElement(id) {
               <button  id="logoff" class="btn btn-sm btn-warning mr-1">End the class</button>
               <button  id="quit"   class="btn btn-sm btn-danger mr-1">Quit and create another class</button>
               
-              <button id="add-booth"     class="ml-1 float-right btn btn-secondary" data-tooltip="tooltip" title="Add another booth"><i class="fas fa-plus-circle"></i></button>
               <button id="config-button" class="ml-1 float-right btn btn-info" data-toggle_="modal" data-target_="#config-panel"><i class="fas fa-cogs"></i></button>
-              <!--button id="load-class"    class="ml-1 float-right btn btn-info disabled" data-tooltip="tooltip" title="Load a class" disabled><i class="fas fa-users"></i></button-->
-              
+
+              <button id="add-booth"     class="ml-1 float-right btn btn-secondary" data-tooltip="tooltip" title="Add another booth"><i class="fas fa-plus-circle"></i></button>
+
               
             </div>
             
@@ -2607,6 +2746,7 @@ function dragElement(id) {
       
       <div class="card-body position-relative">
         <div class="normal-video-controls d-flex justify-content-center align-items-center mb-1" >
+          <div class="booth-connection  w-100 h-100 "></div>
           <div class="booth-signal absolute-middle"></div>
           <div class="booth-flags absolute-middle" ></div>
           <div class="listen-to-booth-indicator text-brightred" style="position: absolute; top: 2px; right: 2px;" role="status"></div>
@@ -2669,15 +2809,16 @@ function dragElement(id) {
                 <label class="custom-file-label" for="file-upload" >Choose file</label>
               </div>
               
-              <div class="">
-                <button class="btn btn-success ml-3" style="width: 8.5rem" id="file-upload-button">Upload</button>
-              </div>          
+              <button class="btn btn-success ml-1" style="width: 8.5rem" id="file-upload-button">Upload</button>
+                
             </div>
         
         </form>
         <div class="m-2 p-2 bg-light" id="file-manager-log"></div>
       </div>
       <div class="modal-footer">
+        <button class="btn btn-outline-success float-left"  id="file-list-refresh-button"><i class="fas fa-sync"></i> &nbsp; Refresh list</button>
+      
         <button type="button" class="btn btn-secondary" data-dismiss="modal" id="file-manager-close-button-2">Close</button>
       </div>
     </div>
@@ -2765,6 +2906,7 @@ function dragElement(id) {
           <select class="form-control" id="select-record-mode">
             <option value="default">Record just the booth</option>
             <option value="split">Record booth on Left channel, source on Right channel</option>
+            <option value="interview">Record booth on Left channel, teacher on Right channel</option>
           </select>
         </div>      
       </div>
