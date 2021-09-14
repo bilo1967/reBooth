@@ -2,6 +2,7 @@
 // Avoid editing the rest if you don't know what you are doing
 
 const DebugMode = false;
+const DebugToServer = false;
 const DebugLevel = 1; // 0=errors, 1=warnings, 2=info, 3=details
 const BetaFeatures = false;
 
@@ -21,7 +22,7 @@ const BoothPollingInterval = 3210;
 
 
 // Allowed uploadable media files
-const AllowedMediaFileExtensions = ['wav','mp3','mpeg3','webm','ogg','m4a','mp4','m4v'];
+const AllowedMediaFileExtensions = ['wav','mp3','mpeg3','ogg','m4a','mp4','m4v'];
 
 
 // Teacher PC has to handle several upstream and downstream connections

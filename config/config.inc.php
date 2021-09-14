@@ -7,6 +7,7 @@
         /*             */ 
         /***************/ 
         
+        "send_invitations"     => true,
         // Used to generate consistent times in invitations
         "timezone"             => "Europe/Rome",
 
@@ -14,9 +15,8 @@
         "booth_url"            => 'https://your.site/booth',
 
         // This will be set as the sender in invitation emails
-        "email_sender"     => "noreply@your.site",
-        "valid_extensions"     => array( 'wav', 'webm', 'mp3', 'ogg', 'mpeg3', 'm4a', 'm4v', 'mp4'),
-        "forbidden_extensions" => array( 'exe', 'msi', 'com', 'bat', 'vbs', 'vba', 'lnk', 'app', 'dmg'),
+        "email_sender"         => "noreply@your.site",
+
         /****************/
         /*              */ 
         /* File storage */
@@ -30,10 +30,12 @@
         // Do not change these values unless yo know what you are doing
         "session_folder"       => "sessions",   // Teacher's sessions subdirectory directory
         "temp_folder"          => "tmp",        // Teacher's temp subdirectory directory
+        "log_folder"           => "log",        // Javascript console debug log folder (in Teachers profile folder)
         "session_prefix"       => "rs-",
+
+        "valid_extensions"     => array( 'wav', 'mp3', 'ogg', 'mkv', 'mpeg3', 'm4a', 'm4v', 'mp4'),
+        "forbidden_extensions" => array( 'exe', 'msi', 'com', 'bat', 'vbs', 'vba', 'lnk', 'app', 'dmg'),
         
-
-
         /********************************/
         /*                              */
         /* PHPMailer SMTP configuration */
@@ -86,10 +88,19 @@
         "google_recaptcha"            => false,
         "google_recaptcha_site_key"   => '1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcd',
         "google_recaptcha_secret_key" => '0987654321abcdZYXWVUTSRQPONMLKJIHGFEDCBA',
-        
+
+
+
+        /*****************/
+        /*               */
+        /* PHP Settings  */
+        /*               */
+        /*****************/
+        "php_session_keepalive"       => true,    // Use PHP session keepalive via AJAX call
+        "php_session_timeout"         => 60*60,   // PHP Session Timeout in seconds, 0=default
 
 
         // Do not change anything below this line
         "end_of_list"      => true
-    );
+);
 ?>
