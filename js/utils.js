@@ -231,69 +231,38 @@ Date.prototype.toLogTimeStamp = function() {
 
 
 /*
- * Dal 2016, con HTML5, i browser possono copiare del testo
- * direttamente nella clipboard. Il metodo è:
+ * Copy text to clipboard
  *
- *    document.execCommand("copy")
+ * copyTextToClipboard(msg, asHTML)
  *
- * e funziona sul testo attualmente selezionato sulla pagina.
+ *   msg is any text you wish to copy to the clipboard
+ *   asHTML tells if msg has to be copied both as HTML rich text and plain text
  * 
- * Questa funzione crea un elemento fittizio, copia il testo
- * desiderato al suo interno, lo seleziona, copia nella
- * clipboard e poi distrugge l'elemento creato.
+ * a user gesture on the page is required before this could work
  *
- * Esempio con jQuery:
- *
- *    copyTextToClipboard($('#id-qualsiasi').text());
+ *    copyTextToClipboard($('#id-qualsiasi').html(), true);
+ *    copyTextToClipboard('This <i>rich text</i> will be copied to the clipoard ' +
+ *                        'both as formatted <code>text/html</code> ' +
+ *                        'and as <code>text/plain</code>', true);
+ *    copyTextToClipboard('This is just plain text'); 
  *
  */
-function copyTextToClipboard(txt)
-{
-	var elem, current, retval;
+function copyTextToClipboard(msg, asHTML = false) {
 
-    // Creo dinamicamente l'elemento fuori
-	// dalla finestra attuale. Non posso crearlo
-    // invisibile perché altrimenti il testo al
-	// suo interno non è selezionabile.
-	// L'id è casuale perché non si sa mai...
-	elem = document.createElement('textarea');
-	elem.style.width = 0;
-	elem.style.height = 0;
-	elem.style.position = "absolute";
-    elem.style.left = "-9999px";
-	elem.id = "an_anonymous_hidden_element_" + 
-	          Math.random().toString(36).replace(/[^a-z]+/g, '').substr(0, 8);
-	document.body.appendChild(elem);
-	elem.textContent = txt;
-	
-	// salvo l'elemento attualmente selezionato,
-	// passo il focus su quello appena creato e
-	// seleziono il testo al suo interno
-	current = document.activeElement;
-	elem.focus();
-	elem.setSelectionRange(0, elem.value.length);
-	
-	// copio la selezione
-    try {
-        retval = document.execCommand("copy");
-    } catch(e) {
-        retval = false;
+    function listener(e) {
+        if (asHTML) {
+            e.clipboardData.setData("text/html", msg);
+            e.clipboardData.setData("text/plain", jQuery(msg).text()); // strip html tags
+        } else {
+            e.clipboardData.setData("text/plain", msg);
+        }
+        e.preventDefault();
     }
-	
-	// distruggo l'elemento temporaneo
-	elem.parentNode.removeChild(elem);
-	
-    // ripasso il focus all'elemento selezionato
-    if (current && typeof current.focus === "function") {
-        current.focus();
-    }
-	
-	return retval;
 
-}
-
-
-
+    document.addEventListener("copy", listener);
+    document.execCommand("copy");
+    document.removeEventListener("copy", listener);
+};
 
 
 function getDateTime(date = null) {
@@ -336,6 +305,8 @@ function getDateTime(date = null) {
     dt.ddmmyyyy = dt.dd + "/" + dt.mm + "/" + dt.year;
     dt.hms = dt.hours + ":" + dt.minutes + ":" + dt.seconds;
     dt.ms = dt.minutes + ":" + dt.seconds;
+    dt.yyyymmdd = '' + dt.year + dt.mm + dt.dd;
+    dt.hhmmss = '' + dt.hours + dt.minutes + dt.seconds;
     
     return dt;
 }
