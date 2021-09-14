@@ -8,11 +8,12 @@ function guestAuth($u, $p) {
     global $pwdfile;
 
     if (!filter_var($u . '.a', FILTER_VALIDATE_EMAIL)) return false;
-
-    $u = strtolower($u); // turn to lowercase for a case insensitive match
+    
+    $u = strtolower($u);
 
     $content = @file_get_contents($pwdfile);
     $users = ($content == false) ? array() : json_decode($content, true);
+    
 
     if (!isset($users[$u])) return false;
 
