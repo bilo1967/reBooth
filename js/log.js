@@ -11,6 +11,7 @@ Date.prototype.toTimeStamp = Date.prototype.toTimeStamp || function() {
     + ':' + String(this.getSeconds()).lpad(2)
     ;
 };
+
 String.prototype.lpad = String.prototype.lpad || function(digits, fill) {
     var str, pad;
     
@@ -22,14 +23,28 @@ String.prototype.lpad = String.prototype.lpad || function(digits, fill) {
 };
 
 
+const loopReplacer = () => {
+    const seen = new WeakSet();
+    return (key, value) => {
+        if (typeof value === "object" && value !== null) {
+            if (seen.has(value)) {
+                return;
+            }
+            seen.add(value);
+        }
+        return value;
+    };
+};
+
 function _dump() {
     var txt = '';
     for (var i = 0; i < arguments[0].length; i++) {
-        txt += (txt == '' ? '' : ' ') +
-               (typeof arguments[0][i] == 'object' ? CircularJSON.stringify(arguments[0][i]) : arguments[0][i]);
+        txt += (typeof arguments[0][i] == 'object' ? JSON.stringify(arguments[0][i], loopReplacer()/*, 2*/) : arguments[0][i]);
+        
     };    
     return txt;
-}
+}   
+
 
 window.onerror = function(message, source, lineno, colno, error) {
     
@@ -43,32 +58,110 @@ window.onerror = function(message, source, lineno, colno, error) {
     }
 }
 
-function redirectConsole() {
+
+
+function redirectConsole(init = '', sendToServer = () => {} ) {
+    
     window.console = {
+        saveLog: init,
         log: function(msg) {
+            
+            var err = new Error;
             var d = new Date();
-            saveLog += '[' + d.toTimeStamp() + " - log] " + 
-                       _dump(arguments) + "\n";
-            originalConsole.log.apply(originalConsole, arguments)
+            
+            var args = Array.from(arguments);
+            if (Number.isInteger(args[0])) {
+                if (args[0] > DebugLevel) return;
+                args.shift();
+            }
+
+            var {script, line, column} = parseErrorStack(err);
+            script = script ? script.replace(/.*\//, '').replace(/\?.*/, '') : '';
+
+            var t = _dump(args)
+            var mark = '[' + d.toTimeStamp() + " - log - " + script + ":" + line + "]";
+            
+            args.unshift(mark);
+
+            this.saveLog += mark + " " + t + "\n";
+            
+            originalConsole.log.apply(originalConsole, args);
+
+            sendToServer(d.toTimeStamp(), 'log', script, line, column, t);
         },
         warn: function(msg) {
+            var err = new Error;
             var d = new Date();
-            saveLog += '[' + d.toTimeStamp() + " - warn] " + 
-                       _dump(arguments) + "\n";
-            originalConsole.warn.apply(originalConsole, arguments)
+            
+            var args = Array.from(arguments);
+
+            var {script, line, column} = parseErrorStack(err);
+            script = script ? script.replace(/.*\//, '').replace(/\?.*/, '') : '';
+
+            var t = _dump(args)
+            var mark = '[' + d.toTimeStamp() + " - warn - " + script + ":" + line + "]";
+            
+            args.unshift(mark);
+
+            this.saveLog += mark + " " + t + "\n";
+            
+            originalConsole.warn.apply(originalConsole, args);
+
+            sendToServer(d.toTimeStamp(), 'warn', script, line, column, t);
+
         },
         error: function(msg){
+            var err = new Error;
             var d = new Date();
-            saveLog += '[' + d.toTimeStamp() + " - error] " + 
-                       _dump(arguments) + "\n";
-            originalConsole.error.apply(originalConsole, arguments)
+            
+            var args = Array.from(arguments);
+
+            var {script, line, column} = parseErrorStack(err);
+            script = script ? script.replace(/.*\//, '').replace(/\?.*/, '') : '';
+
+            var t = _dump(args)
+            var mark = '[' + d.toTimeStamp() + " - error - " + script + ":" + line + "]";
+            
+            args.unshift(mark);
+
+            this.saveLog += mark + " " + t + "\n";
+            
+            originalConsole.error.apply(originalConsole, args);
+
+            sendToServer(d.toTimeStamp(), 'error', script, line, column, t);
         },
         syserr: function(msg){
+            var err = new Error;
             var d = new Date();
-            saveLog += '[' + d.toTimeStamp() + " - error] " + 
-                       _dump(arguments) + "\n";
+            
+            var args = Array.from(arguments);
+
+            var {script, line, column} = parseErrorStack(err);
+            script = script ? script.replace(/.*\//, '').replace(/\?.*/, '') : '';
+
+            var t = _dump(args)
+            var mark = '[' + d.toTimeStamp() + " - syserr - " + script + ":" + line + "]";
+            
+            this.saveLog += mark + " " + t + "\n";
+            
+            sendToServer(d.toTimeStamp(), 'syserr', script, line, column, t);
+
         },
-    }
+        olog: function() {
+            originalConsole.log.apply(originalConsole, arguments);
+        },        
+        owarn: function() {
+            originalConsole.warn.apply(originalConsole, arguments);
+        },
+        oerror: function() {
+            originalConsole.error.apply(originalConsole, arguments);
+        },
+        get: function() {
+            return this.saveLog;
+        },
+    };
+    
+    sendToServer('', '', '', '', '', init);    
 }
 
 function restoreConsole() {
@@ -76,187 +169,33 @@ function restoreConsole() {
 };
 
 
-// CIRCULAR JSON
-var
-  // should be a not so common char
-  // possibly one JSON does not encode
-  // possibly one encodeURIComponent does not encode
-  // right now this char is '~' but this might change in the future
-  specialChar = '~',
-  safeSpecialChar = '\\x' + (
-    '0' + specialChar.charCodeAt(0).toString(16)
-  ).slice(-2),
-  escapedSafeSpecialChar = '\\' + safeSpecialChar,
-  specialCharRG = new RegExp(safeSpecialChar, 'g'),
-  safeSpecialCharRG = new RegExp(escapedSafeSpecialChar, 'g'),
+// Error stack format may vary for different browsers.
+// The following lines should work for chrome and derivatives,
+// firefox and safari. It has not been tested with other browsers
+function parseErrorStack(errObject) {
 
-  safeStartWithSpecialCharRG = new RegExp('(?:^|([^\\\\]))' + escapedSafeSpecialChar),
+    // Get caller line from stack
+    let stack = errObject.stack.split("\n");
+    let caller = stack[0] == "Error" ? stack[2] : stack[1];
 
-  indexOf = [].indexOf || function(v){
-    for(var i=this.length;i--&&this[i]!==v;);
-    return i;
-  },
-  $String = String  // there's no way to drop warnings in JSHint
-                    // about new String ... well, I need that here!
-                    // faked, and happy linter!
-;
+    // parse the column
+    let p = caller.lastIndexOf(":");
+    let col = parseInt(caller.substring(p + 1));
+    caller = caller.slice(0, p)
 
-function generateReplacer(value, replacer, resolve) {
-  var
-    doNotIgnore = false,
-    inspect = !!replacer,
-    path = [],
-    all  = [value],
-    seen = [value],
-    mapp = [resolve ? specialChar : '[Circular]'],
-    last = value,
-    lvl  = 1,
-    i, fn
-  ;
-  if (inspect) {
-    fn = typeof replacer === 'object' ?
-      function (key, value) {
-        return key !== '' && indexOf.call(replacer, key) < 0 ? void 0 : value;
-      } :
-      replacer;
-  }
-  return function(key, value) {
-    // the replacer has rights to decide
-    // if a new object should be returned
-    // or if there's some key to drop
-    // let's call it here rather than "too late"
-    if (inspect) value = fn.call(this, key, value);
+    // parse the line number
+    p = caller.lastIndexOf(":");
+    let line = caller.substring(p + 1);
+    caller = caller.slice(0, p)
 
-    // first pass should be ignored, since it's just the initial object
-    if (doNotIgnore) {
-      if (last !== this) {
-        i = lvl - indexOf.call(all, this) - 1;
-        lvl -= i;
-        all.splice(lvl, all.length);
-        path.splice(lvl - 1, path.length);
-        last = this;
-      }
-      // console.log(lvl, key, path);
-      if (typeof value === 'object' && value) {
-    	// if object isn't referring to parent object, add to the
-        // object path stack. Otherwise it is already there.
-        if (indexOf.call(all, value) < 0) {
-          all.push(last = value);
-        }
-        lvl = all.length;
-        i = indexOf.call(seen, value);
-        if (i < 0) {
-          i = seen.push(value) - 1;
-          if (resolve) {
-            // key cannot contain specialChar but could be not a string
-            path.push(('' + key).replace(specialCharRG, safeSpecialChar));
-            mapp[i] = specialChar + path.join(specialChar);
-          } else {
-            mapp[i] = mapp[0];
-          }
-        } else {
-          value = mapp[i];
-        }
-      } else {
-        if (typeof value === 'string' && resolve) {
-          // ensure no special char involved on deserialization
-          // in this case only first char is important
-          // no need to replace all value (better performance)
-          value = value .replace(safeSpecialChar, escapedSafeSpecialChar)
-                        .replace(specialChar, safeSpecialChar);
-        }
-      }
-    } else {
-      doNotIgnore = true;
-    }
-    return value;
-  };
+    // parse the file name
+    let match = /[a-z]+:\/\//.exec(caller); // match anyprotocol://
+    let file = caller.substring(match.index + match[0].length);
+
+    return {script: file, line: line, column: col};
 }
 
-function retrieveFromPath(current, keys) {
-  for(var i = 0, length = keys.length; i < length; current = current[
-    // keys should be normalized back here
-    keys[i++].replace(safeSpecialCharRG, specialChar)
-  ]);
-  return current;
-}
 
-function generateReviver(reviver) {
-  return function(key, value) {
-    var isString = typeof value === 'string';
-    if (isString && value.charAt(0) === specialChar) {
-      return new $String(value.slice(1));
-    }
-    if (key === '') value = regenerate(value, value, {});
-    // again, only one needed, do not use the RegExp for this replacement
-    // only keys need the RegExp
-    if (isString) value = value .replace(safeStartWithSpecialCharRG, '$1' + specialChar)
-                                .replace(escapedSafeSpecialChar, safeSpecialChar);
-    return reviver ? reviver.call(this, key, value) : value;
-  };
-}
 
-function regenerateArray(root, current, retrieve) {
-  for (var i = 0, length = current.length; i < length; i++) {
-    current[i] = regenerate(root, current[i], retrieve);
-  }
-  return current;
-}
 
-function regenerateObject(root, current, retrieve) {
-  for (var key in current) {
-    if (current.hasOwnProperty(key)) {
-      current[key] = regenerate(root, current[key], retrieve);
-    }
-  }
-  return current;
-}
 
-function regenerate(root, current, retrieve) {
-  return current instanceof Array ?
-    // fast Array reconstruction
-    regenerateArray(root, current, retrieve) :
-    (
-      current instanceof $String ?
-        (
-          // root is an empty string
-          current.length ?
-            (
-              retrieve.hasOwnProperty(current) ?
-                retrieve[current] :
-                retrieve[current] = retrieveFromPath(
-                  root, current.split(specialChar)
-                )
-            ) :
-            root
-        ) :
-        (
-          current instanceof Object ?
-            // dedicated Object parser
-            regenerateObject(root, current, retrieve) :
-            // value as it is
-            current
-        )
-    )
-  ;
-}
-
-var CircularJSON = {
-  stringify: function stringify(value, replacer, space, doNotResolve) {
-    return CircularJSON.parser.stringify(
-      value,
-      generateReplacer(value, replacer, !doNotResolve),
-      space
-    );
-  },
-  parse: function parse(text, reviver) {
-    return CircularJSON.parser.parse(
-      text,
-      generateReviver(reviver)
-    );
-  },
-  // A parser should be an API 1:1 compatible with JSON
-  // it should expose stringify and parse methods.
-  // The default parser is the native JSON.
-  parser: JSON
-};
