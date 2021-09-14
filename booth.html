@@ -54,10 +54,10 @@
   <script src="js/crc-32.js"></script>
   <script src="js/myrecorder.js"></script>
   <script src="js/mychrono.js"></script>  
-  <script src="js/log.js"></script>  
+  <script src="js/log.js?0.0"></script>  
 
   <link rel="stylesheet" href="css/rebooth.css?v0.6">
-  <script src="config/config.js?0.10"></script>
+  <script src="config/config.js?0.11"></script>
   <script src="js/rebooth.js?v0.7"></script>
   
   <script src="js/common.js?0.00"></script>
@@ -79,6 +79,10 @@ body {
   display:none !important;
 }
 
+::placeholder {
+  color: #AAA !important; 
+  opacity: 0.5;
+}
 
 .teacher-video-controls {
     position: absolute;
@@ -142,11 +146,16 @@ const urlParams = new URLSearchParams(window.location.search);
 var myPin           = urlParams.get('pin') ? urlParams.get('pin') : null;
 var teacherUserName = urlParams.get('t')   ? urlParams.get('t')   : null;
 var classCode       = urlParams.get('c')   ? urlParams.get('c')   : null;
-var userName        = urlParams.get('s')   ? urlParams.get('s')   : myPin + "@booth";
+var userName        = urlParams.get('s')   ? urlParams.get('s')   : null;
 var sessionToken    = null;
 
-// Strip illegal/unwanted characters from username
-userName = userName.replace(/[\/\\|&:;$%"<>()+, ]/g, '');
+// Force check on query string parameters
+myPin = validatePin(myPin) ? myPin : null;
+classCode = validatePin(classCode) ? classCode : null;
+userName = validateEmail(userName) ? userName.toLowerCase() : null;
+teacherUserName = validateEmail(teacherUserName) ? teacherUserName.toLowerCase() : null;
+
+//if (userName) userName = userName.trim().replace(/[\/\\|&:;$%"<>()+, ]/g, '');
 
 
 var recorderChrono    = null;
@@ -170,13 +179,45 @@ var audioDestinationNode = null;
 var audioDestinationStreamNode = null;
 
 
-
-
 var boothPlayerGainMax = PlayerGainMax;
 
 
+function logToServer(timeStamp, logLevel, script, line, column, log) {
 
 
+    if (!DebugMode || !DebugToServer || !sessionToken) return;
+
+    let fd = new FormData();
+    fd.append('pin', myPin);
+    fd.append('teacher', teacherUserName);
+    fd.append('classCode', classCode);
+    fd.append('student', userName);
+    fd.append('token', sessionToken);
+    fd.append('timeStamp', timeStamp);
+    fd.append('logLevel', logLevel);
+    fd.append('script', script);
+    fd.append('line', line);
+    fd.append('column', column);
+    fd.append('log', log);
+
+    $.ajax({
+        type: 'POST',
+        url: '/actions/session-log',
+        data: fd,
+        processData: false,
+        contentType: false,
+        dataType: "json",
+    }).done((d) => {
+        if (d.Result != "OK") {
+            //appendLog(d.Message, "log-item-error");
+            //console.owarn("Can't upload log: " + d.Message);
+        }
+
+    }).fail(e => {
+        // ERROR
+        console.oerror("Impossible to log to the server:", e);
+    });
+}
 
 
 
@@ -258,18 +299,21 @@ $(document).ready(function() {
     });
 
     if (DebugMode) {
-        let d = new Date();
-        saveLog = "[" + d.toTimeStamp() + "] " + AppName + " " + AppVersion + " teacher log console redirection enabled\n";
-        redirectConsole();        
+        var init  = "[" + (new Date()).toTimeStamp() + "] " + AppName + " " + AppVersion + " booth console log redirection enabled";
+        redirectConsole(init, logToServer);
     }
     
     $('.download-log-link').on('click', function(e) {
-        this.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(saveLog));
-        this.setAttribute('download', 'log.txt');
+        if (DebugMode) {
+            this.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(console.get()));
+            this.setAttribute('download', 'log.txt');
+        } else {
+            // Debug mode is not enabled
+        }
     });    
 
 
-    console.log('Teacher is "' + teacherUserName + '" and my pin is "' + myPin + '"');
+    if (DebugLevel >= 2) console.log('Teacher is "' + teacherUserName + '" and my pin is "' + myPin + '"');
     appendLog('Teacher is "' + teacherUserName + '" and my pin is "' + myPin + '"');
     
     recorderChrono = new MyChrono(1000, (t) => {
@@ -289,6 +333,7 @@ $(document).ready(function() {
     
     if (myPin != null) $("#my-pin").val(myPin);
     if (teacherUserName != null) $("#teacher-user-name").val(teacherUserName);
+    if (userName != null) $("#student-user-name").val(userName);
     if (classCode != null) $("#class-code").val(classCode);
 
 
@@ -313,7 +358,7 @@ $(document).ready(function() {
 
     function clearBatch() {
     
-        console.log("Clearing batch");
+        if (DebugLevel >= 2) console.log("Clearing batch");
 
         if (batchChrono) batchChrono.clear();
         if (batchTimeout) {
@@ -328,12 +373,12 @@ $(document).ready(function() {
     }
     
     function pauseBatch() {
-        console.log("Pausing batch");
+        if (DebugLevel >= 2) console.log("Pausing batch");
         if (batchChrono) batchChrono.pause();
     }
     
     function resumeBatch() {
-        console.log("Resuming batch");
+        if (DebugLevel >= 2) console.log("Resuming batch");
         if (batchChrono) batchChrono.resume();
     }
 
@@ -351,11 +396,11 @@ $(document).ready(function() {
         teacherVideoElement: $('#teacher-video')[0],
         onTeacherMuted: function() {
             $('#teacher-audio').html('<i class="fas fa-microphone-slash"></i>');
-            console.log("Teacher wants to be muted");
+            if (DebugLevel >= 2) console.log("Teacher wants to be muted");
         },
         onTeacherUnmuted: function() {
             $('#teacher-audio').html('<i class="fas fa-microphone"></i>');
-            console.log("Teacher wants to be unmuted");            
+            if (DebugLevel >= 2) console.log("Teacher wants to be unmuted");            
         },
         onScreenShareStream: function(stream) {
         
@@ -380,7 +425,7 @@ $(document).ready(function() {
 
             if (data.sessionToken) {
                 sessionToken = data.sessionToken.value;
-                console.log("Session token is " + sessionToken);
+                if (DebugLevel >= 2) console.log("Session token is " + sessionToken);
             } else if (data.chat) {
             
                 animateCSS('#send-chat-text', 'heartBeat');
@@ -416,7 +461,7 @@ $(document).ready(function() {
                         break;
                 }
             } else if (data.snapshot) {
-                console.log("Snapshot requested");
+                if (DebugLevel >= 2) console.log("Snapshot requested");
                 let snapfile = data.snapshot.parameters.filename;
                 takeSnapshotFromMediaStream($('#booth-video')[0].srcObject, 2).then(r => {
                     loadAndPlay("sounds/shutter.wav");
@@ -447,7 +492,8 @@ $(document).ready(function() {
             } else if (data.info) {
                 switch (data.info.action) {
                 case 'status': 
-                    let p = $('#audio-player')[0];
+
+                    let p = $('#audio-player').get(0);
                     me.send({
                         info: {
                             action: 'status-feedback',
@@ -482,7 +528,7 @@ $(document).ready(function() {
                 if (Object.keys(BandwidthProfiles).includes(data.profile.value)) {
                     profile = data.profile.value;
                 }
-                console.log('Changing bandwidth profile to ' + profile);                
+                if (DebugLevel >= 3) console.log('Changing bandwidth profile to ' + profile);                
                 setBandwidthProfile(profile);
                 setUserMediaConstraints(handleMediaSuccess, handleMediaErrors);
                 
@@ -494,7 +540,7 @@ $(document).ready(function() {
                 let file = data.batch.parameters.duration;
                 let crc = data.batch.parameters.crc;
                 
-                console.log('Teacher has scheduled a ' + data.batch.action + ' batch with these parameters: ' + JSON.stringify(data.batch.parameters));
+                if (DebugLevel >= 2) console.log('Teacher has scheduled a ' + data.batch.action + ' batch with these parameters: ' + JSON.stringify(data.batch.parameters));
                 
             
                 switch (data.batch.action) {
@@ -503,11 +549,11 @@ $(document).ready(function() {
                     break;
 
                 case 'simultaneous':
-                    console.log("Starting SIM translation batch");
+                    if (DebugLevel >= 2) console.log("Starting SIM translation batch");
                     appendLog("Starting simultaneous translation session");
 
 
-                    console.log("Batch in progress: triggering recorder start command");
+                    if (DebugLevel >= 2) console.log("Batch in progress: triggering recorder start command");
                     // Start recorder
                     $(document).trigger('teacher-recorder-commands', {
                         date: Date.now(),
@@ -534,7 +580,7 @@ $(document).ready(function() {
                     });
                     
                     // Delay 1s audio player
-                    console.log("Batch in progress: triggering player play command (1s delay)");
+                    if (DebugLevel >= 2) console.log("Batch in progress: triggering player play command (1s delay)");
                     setTimeout(() => {
 
                         // Start audio player
@@ -552,9 +598,9 @@ $(document).ready(function() {
                     
         
                     // Append an event handler for the "onended" of the player
-                    console.log("Batch in progress: appending 'onended' event handler for current track");
+                    if (DebugLevel >= 3) console.log("Batch in progress: appending 'onended' event handler for current track");
                     $('#audio-player').on('ended.sim', function() {
-                        console.log("Batch in progress: scheduling recorder stop command after "+delay+"s (+2s delay)");
+                        if (DebugLevel >= 2) console.log("Batch in progress: scheduling recorder stop command after "+delay+"s (+2s delay)");
                         batchTimeout = setTimeout(() => {
                             $(document).trigger('teacher-recorder-commands', {
                                 date: Date.now(),
@@ -571,7 +617,7 @@ $(document).ready(function() {
                     
                     
                 case 'consecutive':
-                    console.log("Starting CON translation batch");
+                    if (DebugLevel >= 2) console.log("Starting CON translation batch");
                     appendLog("Starting consecutive translation session");
                     
 
@@ -607,10 +653,10 @@ $(document).ready(function() {
 
                     
                     // Append an event handler for the "onended" of the player
-                    console.log("Batch in progress: appending 'onended' event handler for current track");
+                    if (DebugLevel >= 3) console.log("Batch in progress: appending 'onended' event handler for current track");
                     $('#audio-player').on('ended.con', function() {
                     
-                        console.log("ended.con has been called");
+                        if (DebugLevel >= 3) console.log("ended.con has been called");
                     
                         // Delay 1s 
                         setTimeout(() => {
@@ -623,7 +669,7 @@ $(document).ready(function() {
                                 parameters: data.batch.parameters ? data.batch.parameters : null
                             });
                             
-                            console.log("Batch in progress: scheduling recorder stop command after "+duration+"s (+2s delay)");                            
+                            if (DebugLevel >= 2) console.log("Batch in progress: scheduling recorder stop command after "+duration+"s (+2s delay)");                            
                             batchTimeout = setTimeout(() => {
                                 $(document).trigger('teacher-recorder-commands', {
                                     date: Date.now(),
@@ -649,7 +695,7 @@ $(document).ready(function() {
         },
         onDisconnect: function() {
         
-            console.log("Teacher disconnected - finalizing GUI");
+            if (DebugLevel >= 2) console.log("Teacher disconnected - finalizing GUI");
             appendLog("Teacher disconnected.");
             
             // Clear all flags
@@ -699,7 +745,7 @@ $(document).ready(function() {
         e.preventDefault();
         if ($(this).hasClass('disabled')) return;
         
-        console.log("enumerating devices");
+        if (DebugLevel >= 2) console.log("enumerating devices");
         
         getDevices()
             .then(() => { 
@@ -736,8 +782,6 @@ $(document).ready(function() {
     $('#select-volume-overboost').on('change', function () {
         boothPlayerGainMax = $(this).val() == 'default' ? PlayerGainMax : $(this).val();
 
-        console.log("=======> " + boothPlayerGainMax);
-        
         Cookies.set('volume-overboost', boothPlayerGainMax, { expires: 365 });
         $('#audio-player-volume').trigger('input');
     
@@ -760,9 +804,9 @@ $(document).ready(function() {
 
     // log to PeerJS server and get an Id
     me.logon(
-        userName,
+        userName ? userName : "none",
         () => { 
-            console.log("You have successfully logged into the server. You're ready to join the class.");
+            if (DebugLevel >= 2) console.log("You have successfully logged into the server. You're ready to join the class.");
             appendLog("You have successfully logged into the server. You're ready to join the class.");
         },
         (e) => {
@@ -781,18 +825,41 @@ $(document).ready(function() {
 
     
     $('#join-connection').on('click', function(e) {
+    
         e.preventDefault();
+        
         if ($(this).hasClass('disabled')) return;
+        
         if (me.connected()) return;
         
-        // Media Call teacher
-        
-        let teacher = $("#teacher-user-name").val().trim();
+        // validate input fields
+
+        let teacher = $("#teacher-user-name").val().trim().toLowerCase();
         let pin = $("#my-pin").val().trim();
         let code = $("#class-code").val().trim();
+        let name = $("#student-user-name").val().trim().toLowerCase(); 
         
-        if (teacher == '' || pin == '') return;
+        if (!validateEmail(teacher)) teacher = '';
+        if (!validatePin(pin)) pin = '';
+        if (name == '' && pin != '') {
+            name = pin + "@booth.nn";
+        }
+        if (!validateEmail(name)) name = '';
+        if (code && !validatePin(code)) code = '';
+
+        if (teacher == '' || pin == '' || name == '') {
+            if (teacher == '') animateCSS('#teacher-user-name', 'flash');
+            if (pin == '') animateCSS('#my-pin', 'flash');
+            if (name == '') animateCSS('#student-user-name', 'flash');
+            return;
+        }
+
+        $("#teacher-user-name").val(teacher);
+        $("#student-user-name").val(name);
+        $("#my-pin").val(pin);
+        $("#class-code").val(code);
         
+        userName = name; me.userName = userName;
         myPin = pin;
         teacherUserName = teacher;
         classCode = code;
@@ -807,7 +874,7 @@ $(document).ready(function() {
             classCode, 
             myPin, 
             () => { 
-                console.log("Data connection established. Waiting for media stream...");
+                if (DebugLevel >= 2) console.log("Data connection established. Waiting for media stream...");
                 appendLog("Data connection established. Waiting for media stream...");
                 $('#close-connection,#join-connection').removeClass('disabled');
                 $('#join-connection').addClass('disabled');
@@ -820,7 +887,7 @@ $(document).ready(function() {
                 $('#close-connection').addClass('disabled');
             },
             (stream) => {             
-                console.log("Media connection established");
+                if (DebugLevel >= 2) console.log("Media connection established");
                 appendLog("Media connection established");
             },
             (e) => { 
@@ -892,15 +959,7 @@ $(document).ready(function() {
         }
         
         if (t == "") return;
-/*        
-        me.send({chat: {text: "<span>" + t + "<br/></span>"}});
-        
-        $("#chat-board").append("<span>You: " + t + "<br/></span>");
-                      
-        $("#chat-board").scrollToEnd();        
-        
-        $('#chat-text').val('');
-*/
+
         me.send({chat: {text: t}});
         writeToChat(t);
         
@@ -998,18 +1057,17 @@ $(document).ready(function() {
         case 'record':
         
             if (recorder && recorder.status != 'inactive') {
-                console.log('rec request discarded: already recording');
+                if (DebugLevel >= 2) console.log('rec request discarded: already recording');
                 break; 
             }
             
             loadAndPlay("sounds/bell.wav");
             
-            console.log("Start recording");
+            if (DebugLevel >= 2) console.log("Start recording");
             
             // If the booth was disconnected while recording and did not 
             // receive a stop recording command we stop it now
             // if (recorder && recorder.status == 'recording') recorder.stop();
-
 
             // Set recording mode (split => player on R channel, booth on L channel )
             if (params.recordingMode == 'split') {
@@ -1025,6 +1083,24 @@ $(document).ready(function() {
                 
                 recorder = new MyRecorder(audioDestinationStreamNode.stream, null, {mimeType: 'audio/webm'});
                 
+            } else if (params.recordingMode == 'interview') {
+
+                // Setup a double audio track stream for recording
+                
+                if (selfSource != null) selfSource = null
+                selfSource = audioCtx.createMediaStreamSource(me.mediaStream);
+
+                if (teacherSource != null) teacherSource = null
+                teacherSource = audioCtx.createMediaStreamSource(me.teacherMediaStream);
+                
+                selfSource.connect(mixerNode, 0, 0);    // Booth: L
+                teacherSource.connect(mixerNode, 0, 1);  // Source: R
+                
+                mixerNode.connect(audioDestinationStreamNode);
+                
+                recorder = new MyRecorder(audioDestinationStreamNode.stream, null, {mimeType: 'audio/webm'});
+
+            
             } else {
                 // Record just the booth track
             
@@ -1044,7 +1120,7 @@ $(document).ready(function() {
         case 'stop-and-save':
         
             if (recorder && recorder.status != 'recording') {
-                console.log('stop-and-save request discarded: already stopped');
+                if (DebugLevel >= 2) console.log('stop-and-save request discarded: already stopped');
                 break; 
             }
 
@@ -1052,7 +1128,7 @@ $(document).ready(function() {
             clearBatch();
             
         
-            console.log("Stop recording and save");
+            if (DebugLevel >= 2) console.log("Stop recording and save");
             appendLog("Audio recording has been stopped. Your recording will be ready in a few moments.");
             recorderChrono.stop();
             recorder.stop().then((r) => {
@@ -1109,21 +1185,33 @@ $(document).ready(function() {
                 $('#download-recording').removeClass('disabled');
                 animateCSS('#download-recording', 'heartBeat');
             }).catch((e) => {
-// LA REGISTRAZIONE LOCALE E' ANDATA MALE...            
+
+
+                
+            
+// LA REGISTRAZIONE LOCALE E' ANDATA MALE...
+
+
+
+
+
+
+
+
             });
             break;
         case 'pause':
             appendLog("Audio recording has been paused.");
             recorderChrono.pause();
             recorder.pause();
-            console.log("Pause recording");        
+            if (DebugLevel >= 2) console.log("Pause recording");        
             $('#recording-indicator').addClass('spinner-grow');
             break;
         case 'resume':
             appendLog("Audio recording has been resumed.");
             recorderChrono.resume();
             recorder.resume();
-            console.log("Resume recording");
+            if (DebugLevel >= 2) console.log("Resume recording");
             $('#recording-indicator').addClass('spinner-grow');
             break;
         }
@@ -1167,8 +1255,8 @@ $(document).ready(function() {
         }
     });
     
-    $(document).on('enterpictureinpicture', () => { console.log('enterpictureinpicture'); }); 
-    $(document).on('leavepictureinpicture', () => { console.log('leavepictureinpicture'); });
+    $(document).on('enterpictureinpicture', () => { if (DebugLevel >= 2) console.log('enterpictureinpicture'); }); 
+    $(document).on('leavepictureinpicture', () => { if (DebugLevel >= 2) console.log('leavepictureinpicture'); });
 
     $('#player-toggle-pip-button').on('click', function() {
         if (document.pictureInPicture) {
@@ -1190,31 +1278,38 @@ $(document).ready(function() {
     // Abort controller to interrupt fetch commands
     var controller = null;
     
-    $(document).on('teacher-player-commands', (event, data) => {
-        let timestamp = event.timeStamp;
-        let action = data.action;
-        let params = data.parameters;
-        let teacher = '';
-        let file = '';
+    $(document).on('teacher-player-commands', async (event, data) => {
+        // let timestamp = event.timeStamp;
+
+        var params = data.parameters;
+        var teacher = '';
+        var file = '';
         
         // Reference to audio player
-        let audioPlayer = $('#audio-player')[0];
+        var audioPlayer = $('#audio-player').get(0);
+
         
-        
-        
-        switch (action) {
+        switch (data.action) {
         case 'load':
             file = params.file;
             crc = params.crc;
             teacher = params.teacher;
             
-            audioPlayer.currentTime = 0;
+            
+            $('#audio-player').off('canplaythrough'); // remove handler, if any
             audioPlayer.pause();
+
+            //audioPlayer.currentTime = 0;            
+            
+            //audioPlayer.src = ""; // clear 
+            
+            $('#audio-player-text').html('Loading&hellip;');
+            $('#audio-player-display').html("00:00:00 / --:--:--");
             
             
             fileName = file;// Global
             
-            console.log("Teacher wants to load this file: " + params.file);
+            if (DebugLevel >= 2) console.log("Teacher wants to load this file: " + params.file);
             
             var formData = new FormData();
             formData.append("user", teacher);
@@ -1247,7 +1342,7 @@ $(document).ready(function() {
             }).then(buf => {
 
                 fileCRC = crc32(buf);
-                console.log('CRC32 of file "' + fileName + " is 0x" + fileCRC.toHex());
+                if (DebugLevel >= 2) console.log('CRC32 of file "' + fileName + " is 0x" + fileCRC.toHex());
                 
                 if (crc != fileCRC) {
                     throw Error("crc-error");
@@ -1255,16 +1350,21 @@ $(document).ready(function() {
                 
                 var blob = new Blob([ buf ]);
 
-                // Il blob è caricato
-                console.log("Blob loaded");
-                
-                
                 // Creo un pseudolink per poter caricare il blob come source 
                 let objectURL = URL.createObjectURL(blob);
-                
+
+                // Il blob è caricato
+                if (DebugLevel >= 2) console.log("Blob ready");
+
+
                 // Carico il blob nel player
                 audioPlayer.src = objectURL;
                 
+                $('#audio-player').one('canplaythrough', canPlayThrough);
+                
+                // Il blob è caricato
+                if (DebugLevel >= 2) console.log("Loading blob");
+
                 
                 $('#audio-player-text').html(baseName(file));
                 
@@ -1292,7 +1392,7 @@ $(document).ready(function() {
                         }
                     });     
                 } else if (code == 'AbortError') {
-                    console.log("Player error: current fetch aborted");
+                    console.warn("Player error: current fetch aborted");
                 } else {
                     let message = (code in httpErrorCodes) ? httpErrorCodes[code] : "unknown error";
                     
@@ -1315,17 +1415,17 @@ $(document).ready(function() {
             
             break;
         case 'play':
-            console.log("Teacher wants to play the loaded file: " + params.file);
-            audioPlayer.play();
+            if (DebugLevel >= 2) console.log("Teacher wants to play the loaded file: " + fileName /*params.file*/);
+            await audioPlayer.play();
             break;
         case 'pause':
             audioPlayer.pause();
-            console.log("Teacher wants to pause the playing file: " + params.file);
+            if (DebugLevel >= 2) console.log("Teacher wants to pause the playing file: " + fileName /*params.file*/);
             break;
         case 'stop':
             audioPlayer.pause();
             audioPlayer.currentTime = 0;
-            console.log("Teacher wants to stop the playing file: " + params.file);
+            if (DebugLevel >= 2) console.log("Teacher wants to stop the playing file: " + fileName /*params.file*/);
             break;
         }
     });    
@@ -1346,7 +1446,7 @@ $(document).ready(function() {
     
 
     $('#audio-player').on('play', function() {
-        console.log("The media file '"+fileName+"' is playing");
+        if (DebugLevel >= 2) console.log("The media file '"+fileName+"' is playing");
         me.send({
             player: {
                 action: "started",
@@ -1359,7 +1459,7 @@ $(document).ready(function() {
         });     
     });
     $('#audio-player').on('pause', function() {
-        console.log("The media file '"+fileName+"' is paused");
+        if (DebugLevel >= 2) console.log("The media file '"+fileName+"' is paused");
         me.send({
             player: {
                 action: "paused",
@@ -1371,13 +1471,17 @@ $(document).ready(function() {
             }
         });     
     });
-
-
+    
+    
     // Quando il player può eseguire il suo contenuto
-    $('#audio-player').on('canplaythrough', function() {
-        let audioPlayer = $(this)[0];
+    var canPlayThrough = function() {
 
-        console.log("Media file is loaded and ready to play");
+        const audioPlayer = $('#audio-player').get(0);
+        
+console.log(audioPlayer.src);
+
+        if (DebugLevel >= 2) console.log("Media file is loaded and ready to play");
+
         // Tell the teacher that media file is loaded and ready to play
         me.send({
             player: {
@@ -1394,8 +1498,6 @@ $(document).ready(function() {
         let t = "" + Math.floor(audioPlayer.duration);
         $('#audio-player-display').html("00:00:00 / " + t.toHHMMSS());
         $('#audio-player-progress').css('width', "0%");
-        
-        
         
         // Show the player
         if (audioPlayer.captureStream) {
@@ -1414,30 +1516,35 @@ $(document).ready(function() {
         
         animateCSS('#audio-player-controls', 'rubberBand');
         loadAndPlay("sounds/click.wav");
-        
-        
-    });
+
+    }
+
+
+    
     
     
     // Irrobustiamo il tutto verificando eventuali errori
-    $('#audio-player').on('error', (e) => {
+    $('#audio-player').on('error', (e) => {    
+        
+        if ($('#audio-player').get(0).src == noSrc) return;        
+        
         $('#audio-player-text').html("Can't play this file");
         appendLog("Can't play this media file");
         console.warn(e);
     });
 
-    $('#audio-player').on('loadstart', () => { console.log('Player event: loadstart'); });
-    $('#audio-player').on('pause',	   () => { console.log('Player event: pause');     });
-    $('#audio-player').on('play',	   () => { console.log('Player event: play');      });
-    $('#audio-player').on('playing',   () => { console.log('Player event: playing');   }); 
-    $('#audio-player').on('progress',  () => { console.log('Player event: progress');  });
-    $('#audio-player').on('seeked',	   () => { console.log('Player event: seeked');    });
-    $('#audio-player').on('seeking',   () => { console.log('Player event: seeking');   }); 
-    $('#audio-player').on('stalled',   () => { console.log('Player event: stalled');   }); 
-    $('#audio-player').on('suspend',   () => { console.log('Player event: suspend');   }); 
-    $('#audio-player').on('waiting',   () => { console.log('Player event: waiting');   });    
-    $('#audio-player').on('abort',     () => { console.log('Player event: abort');     });
-    $('#audio-player').on('emptied',   () => { console.log('Player event: emptied');   });
+    $('#audio-player').on('loadstart', () => { if (DebugLevel >= 2) console.log('Player event: loadstart'); });
+    $('#audio-player').on('pause',	   () => { if (DebugLevel >= 2) console.log('Player event: pause');     });
+    $('#audio-player').on('play',	   () => { if (DebugLevel >= 2) console.log('Player event: play');      });
+    $('#audio-player').on('playing',   () => { if (DebugLevel >= 2) console.log('Player event: playing');   }); 
+    $('#audio-player').on('progress',  () => { if (DebugLevel >= 2) console.log('Player event: progress');  });
+    $('#audio-player').on('seeked',	   () => { if (DebugLevel >= 2) console.log('Player event: seeked');    });
+    $('#audio-player').on('seeking',   () => { if (DebugLevel >= 2) console.log('Player event: seeking');   }); 
+    $('#audio-player').on('stalled',   () => { if (DebugLevel >= 2) console.log('Player event: stalled');   }); 
+    $('#audio-player').on('suspend',   () => { if (DebugLevel >= 2) console.log('Player event: suspend');   }); 
+    $('#audio-player').on('waiting',   () => { if (DebugLevel >= 2) console.log('Player event: waiting');   });    
+    $('#audio-player').on('abort',     () => { if (DebugLevel >= 2) console.log('Player event: abort');     });
+    $('#audio-player').on('emptied',   () => { if (DebugLevel >= 2) console.log('Player event: emptied');   });
     
     
     let pp = 0;
@@ -1457,7 +1564,7 @@ $(document).ready(function() {
     
     $('#audio-player').on('ended', function() {
     
-        console.log("The media file '"+fileName+"' is ended");
+        if (DebugLevel >= 2) console.log("The media file '"+fileName+"' is ended");
         
         $('#audio-player-progress').css('width', "100%");
         
@@ -1478,18 +1585,47 @@ $(document).ready(function() {
     // Copy contents of log board to clipboard
     $('#log-board').on('click', function() {
         animateCSS('#log-board', "bounce");
-        let t = "User log board:\n\n";
+        let t = '';
         
+        t += "<p><h4>Class info</h4>\n<ul>\n";
+        if (me.connected()) {
+            t += "<li>Connection status: <b>connected</b> (session token: " + sessionToken + ")</li>\n";
+        } else {
+            t += "<li>Connection status: <i>not connected</i></li>\n";
+        }
+        t += "<li>Teacher: <b>" + teacherUserName + "</b></li>\n";
+        t += "<li>Booth user: <b>" + userName + "</b></li>\n";
+        t += "<li>Booth pin: <b>" + myPin + "</b></li>\n";
+        t += "<li>Class code: " + (classCode ? "<b>" + classCode + "</b>": "<i>none</i>") + "</li>\n";
+        t += "</ul></p>\n\n";
+               
+
+        t += "<p><h4>Device setup info</h4>\n<ul>\n";
+        let vs = $("#select-video-source option:selected").text() || $("#select-video-source option:first").text();
+        let as = $("#select-audio-source option:selected").text() || $("#select-audio-source option:first").text();
+        let ao = $("#select-audio-output option:selected").text() || $("#select-audio-output option:first").text();
+        let o  = $("#select-volume-overboost option:selected").text() || $("#select-volume-overboost option:first").text();
+        t += "<li>Video source: </b>" + vs + "</b></li>\n";
+        t += "<li>Audio source: </b>" + as + "</b></li>\n";
+        t += "<li>Audio output: </b>" + ao + "</b></li>\n";
+        t += "<li>Overboost: </b>" + o + "</b></li>\n";
+        t += "</ul></p>\n\n";
+        
+        
+        t += "<p><h4>Session log</h4>\n\n";
+        t += "<pre>";
         $(this).children().each(function() {
             t +=  $(this).text() + "\n";
         });
+        t += "</pre></p>\n\n";
+
         if (DebugMode) {
-            t += "\n=========================================\n\n";
-            t += "Browser log console: \n\n";
-            t += saveLog;
+            t += "<p><h4>Developer log</h4>\n\n<pre>"
+            t += console.get();
+            t += "</pre>\n</p>\n";
         }
-        
-        copyTextToClipboard(t);
+
+        copyTextToClipboard(t, true);
     });
 
 });
@@ -1530,35 +1666,38 @@ $(document).ready(function() {
       </div>
       
       <div class="form-inline col-sm-9">
-        <div style="width: 35rem;min-width:35rem">
+        <div style="width: 40rem;min-width:40rem">
           <div class="form-inline mb-2" >
-            <div>
+            <div data-tooltip="tooltip" title="Teacher email address">
               <label class="label-small" for="teacher-user-name">Teacher</label>
-              <input type="text" class="form-control" style="width: 15.7rem" id="teacher-user-name" placeholder="name@example.com">
+              <input type="text" class="form-control  pl-2 pr-2" style="width: 12rem" id="teacher-user-name" placeholder="teacher@example.com">
             </div>
-            <div>
-              <label class="label-small" for="my-pin">Code</label>
-              <input type="text" style="width: 3rem" class="form-control ml-1" id="class-code" placeholder="--">
+            <div data-tooltip="tooltip" title="Your email address">
+              <label class="label-small" for="student-user-name">Student (you)</label>
+              <input type="text" style="width: 10rem" class="form-control ml-1  pl-2 pr-2" id="student-user-name" placeholder="you@example.com">
             </div>
-            
-            <div>
+            <div data-tooltip="tooltip" title="Your unique PIN">
               <label class="label-small" for="my-pin">Pin</label>
-              <input type="text" style="width: 5rem" class="form-control ml-1" id="my-pin" placeholder="Insert a pin">
+              <input type="text" style="width: 5rem" class="form-control ml-1 pl-2 pr-2" id="my-pin" placeholder="your pin">
+            </div>
+            <div data-tooltip="tooltip" title="Class code (empty unless the teacher has started multiple sessions)">
+              <label class="label-small" for="my-pin">Code</label>
+              <input type="text" style="width: 2.5rem" class="form-control ml-1  pl-2 pr-2 text-center  " id="class-code" placeholder="--">
             </div>
             <div>
               <label class="small-label" for="join-connection">&nbsp;</label>
-              <button class="btn btn-primary mb-2 ml-1" style="width: 5rem" id="join-connection">Join</button>
+              <button class="btn btn-primary mb-2 ml-1" style="width: 4.5rem" id="join-connection" data-tooltip="tooltip" title="Join the class (connect)">Join</button>
             </div>
             <div>
               <label class="small-label" for="join-connection">&nbsp;</label>
-              <button class="btn btn-danger mb-2 ml-1 disabled" style="width: 5rem" id="close-connection">Leave</button>
+              <button class="btn btn-danger mb-2 ml-1 disabled" style="width: 4.5rem" id="close-connection"  data-tooltip="tooltip" title="Leave the class (disconnect)">Leave</button>
             </div>
           </div>
 
-          <div id="audio-player-controls" class="rounded border bg-light pl-2 form-inline mb-2 text-dark" style="width: 34.75rem">
-            <div class="form-row unselectable" style="width: 21.5rem">
+          <div id="audio-player-controls" class="rounded border bg-light pl-2 form-inline mb-2 text-dark" style="width: 39.75rem">
+            <div class="form-row unselectable" style="width: 26.5rem">
               <span class="label-small ellipsis" for="audio-player-bar" id="audio-player-text"
-              style="width: 23rem">none</span>
+              style="width: 27rem">none</span>
               <div class="progress w-100" id="audio-player-bar">
                 <div id="audio-player-progress" class="progress-bar bg-info" role="progressbar" style="width:100%;"></div>
               </div>
@@ -1592,7 +1731,7 @@ $(document).ready(function() {
       
       <div class="col-sm-1 text-right">
         <div class="w-100 mt-2">
-          <button id="config-button" class="btn btn-lg btn-info" data-to-ggle="modal" data-ta-rget="#config-panel"><i class="fas fa-cogs"></i></button>
+          <button id="config-button" class="btn btn-lg btn-info" data-to-ggle="modal" data-ta-rget="#config-panel" data-tooltip="tooltip" title="Setup your media devices"><i class="fas fa-cogs"></i></button>
         </div>
          
       </div>
@@ -1636,9 +1775,9 @@ $(document).ready(function() {
                 </div>
               </div>
               <div class="card-footer text-left">
-                  <button class="btn btn-lg  btn-warning" id="button-raise-hand"><i class="far fa-hand-paper"></i></button>
-                  <button class="btn btn-lg btn-success" id="button-thumbs-up"><i class="far fa-thumbs-up"></i></button>
-                  <button class="btn btn-lg btn-danger" id="button-thumbs-down"><i class="far fa-thumbs-down"></i></button>                
+                  <button class="btn btn-lg  btn-warning" id="button-raise-hand" data-tooltip="tooltip" title="Raise your hand"><i class="far fa-hand-paper"></i></button>
+                  <button class="btn btn-lg btn-success" id="button-thumbs-up" data-tooltip="tooltip" title="Thumbs up"><i class="far fa-thumbs-up"></i></button>
+                  <button class="btn btn-lg btn-danger" id="button-thumbs-down" data-tooltip="tooltip" title="Thumbs down"><i class="far fa-thumbs-down"></i></button>                
               </div>
             </div>
             <!-- END: TEACHER VIDEO DIV -->
@@ -1660,7 +1799,7 @@ $(document).ready(function() {
                 </div>
               </div>
               <div class="card-footer d-flex ">
-                <a id="download-recording"  title="Click here to download your recording" class="disabled btn btn-lg btn-success ml-auto"><i class="fas fa-save"></i></a>
+                <a id="download-recording" data-tooltip="tooltip" title="Click here to download your recording" class="disabled btn btn-lg btn-success ml-auto"><i class="fas fa-save"></i></a>
               </div>
             </div>
             <!-- END: STUDENT VIDEO DIV --> 
