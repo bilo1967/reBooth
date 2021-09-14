@@ -1,17 +1,29 @@
 <?php
+    // Load configuration
     include_once(dirname(__FILE__) . "/config/config.inc.php");
     
     header('Content-Type: text/html; charset=utf-8');
+
+    if (isset($CONFIG['php_session_timeout']) && $CONFIG['php_session_timeout'] > 0) {
+        // Set the maxlifetime of session
+        ini_set("session.gc_maxlifetime",  $CONFIG['php_session_timeout']);
+
+        // Also set the session cookie timeout to 0 (until the browser is closed)
+        ini_set("session.cookie_lifetime", 0);
+    }
+
     session_start();
 
     if (!isset($_SESSION['login']) || ! $_SESSION['login']) {
         //header('Location: login');
+        header('refresh:0; url=/login');
     }
-
 ?>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en">
 <head>
   <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+  <meta name="robots" content="index, follow">
+  
   <title>ReBooth</title>
 
   <!-- favicon for all devices -->
@@ -72,10 +84,7 @@ $(document).ready(function() {
         $('#logout').removeClass('disabled');
     } else {
         window.location.replace('/login');
-        
     }
-    
-
 });
 
 </script>
