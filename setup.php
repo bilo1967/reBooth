@@ -1,12 +1,23 @@
 <?php
+    // Load configuration
     include_once(dirname(__FILE__) . "/config/config.inc.php");
     
     header('Content-Type: text/html; charset=utf-8');
+
+    if (isset($CONFIG['php_session_timeout']) && $CONFIG['php_session_timeout'] > 0) {
+        // Set the maxlifetime of session
+        ini_set("session.gc_maxlifetime",  $CONFIG['php_session_timeout']);
+  
+        // Also set the session cookie timeout to 0 (until the browser is closed)
+        ini_set("session.cookie_lifetime", 0);
+    }
+
     session_start();
 
     if (!isset($_SESSION['login']) || ! $_SESSION['login']) {
         header('Location: login');
     }
+    
 ?>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en">
 <head>
@@ -37,14 +48,23 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.1.2/css/tempusdominus-bootstrap-4.min.css"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.1.2/js/tempusdominus-bootstrap-4.min.js"></script>  
   
+  
   <!-- Bootstrap 4 alerts, confirm, prompt boxex -->
   <script src="js/bootbox.min.js"></script>
 
-  <script src="js/utils.js"></script>
+
+  <!-- Toastr -->
+  <script src="//cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+
+
+  <script src="js/js.cookie.js"></script>
+
+  <script src="js/utils.js?0.00"></script>
   <link rel="stylesheet" href="css/rebooth.css?0.02">
   <script src="config/config.js?0.01"></script>
   <script src="js/rebooth.js?0.01"></script>
-
+  <script src="js/common.js"></script>
   
 <style>
 body {
@@ -58,11 +78,15 @@ body {
 </style>
   
 <script>
+
+const userName        = '<?=@$_SESSION["user"]?>';
+
 $(document).ready(function() {
     
     
     var invitations = [];
     
+    keepAliveSession(); // keep alive PHP session 
 
     $('#class-time').datetimepicker({
         locale: 'it',
@@ -84,7 +108,7 @@ $(document).ready(function() {
     } catch (e) {
         invitations = [];
     }
-    
+
     initEmailList();
     
     function initEmailList() {
@@ -185,6 +209,8 @@ $(document).ready(function() {
            //$('#start-class-no-invitations').removeClass('disabled').addClass('disabled');
            $('#email-list-button-bar').hide();
        }
+       
+       $('#show-origin').html('');
     });
     
     
@@ -204,12 +230,14 @@ $(document).ready(function() {
         
         $(this).parent().parent().remove();
         
-       if (invitations.length == 0) {
-           $('#start-class').removeClass('disabled').addClass('disabled');
-           //$('#start-class-no-invitations').removeClass('disabled').addClass('disabled');
+        if (invitations.length == 0) {
+            $('#start-class').removeClass('disabled').addClass('disabled');
+            //$('#start-class-no-invitations').removeClass('disabled').addClass('disabled');
            
-           $('#email-list-button-bar').hide();
-       }
+            $('#email-list-button-bar').hide();
+        }
+        
+        $('#show-origin').html('');
     });    
     
     $('#class-code').on('keydown', function(e) {
@@ -222,7 +250,7 @@ $(document).ready(function() {
         }
         
     });
-        
+    
         
     $('#start-class,#start-class-no-invitations').on('click', function() {
         
@@ -235,8 +263,8 @@ $(document).ready(function() {
         // offset (in seconds)
         let t = $('#class-time').datetimepicker('viewDate').format();
         
-        console.log(t);
-        
+        // Save current class to cookie
+        Cookies.set('current-class', {invitations: invitations, classCode: $('#class-code').val()}, { expires: 14 });        
         $.ajax({
             type: "POST",
             url: "/actions/send",
@@ -277,7 +305,51 @@ $(document).ready(function() {
         };
         var blob = new Blob([JSON.stringify(data, null, '    ')], {type: 'application/json'});
         var url = URL.createObjectURL(blob);
-        downloadDataURL(url, 'my_class.rebooth');
+        
+        var t = getDateTime();
+        
+        var fileName = t.yyyymmdd + '-' + t.hhmmss + '-' + userName.replace(/@.*$/, '') + ($('#class-code').val() ? '-c' + $('#class-code').val() : '') + ".rebooth";
+        
+        downloadDataURL(url, fileName);
+    });
+
+    $('#load-from-cookie').on('click', function() {
+        const classCookie = Cookies.get('current-class');
+
+        data = (classCookie === undefined ? undefined : JSON.parse( classCookie ));
+        
+        if (typeof data === 'object') {
+
+            bootbox.confirm({
+                title: "Do you really want to replace your class setup?",
+                message: "By loading a new class setup you'll replace the current one. Do you really want to continue?",
+                centerVertical: true,
+                buttons: {
+                    confirm: {
+                        label: 'Yes',
+                        className: 'btn-danger'
+                    },
+                    cancel: {
+                        label: 'No',
+                        className: 'btn-success'
+                    }
+                },           
+                callback: (r) => {
+                    if (!r) return;
+                    invitations = [];
+                    invitations = data.invitations;
+                    $('#class-code').val(data.classCode);
+                    
+                    $('#show-origin').html('');
+                    
+                    initEmailList();
+                }
+            });
+        } else {
+            toastr.info("No previously used class has been found on this PC", "No saved class", {positionClass: "toast-middle", timeOut: 2500} );
+        }
+        
+        
     });
 
     $('#load-from-file').on('change', (e) => {
@@ -292,8 +364,6 @@ $(document).ready(function() {
         }
         
         var file = me.files[0];
-
-
 
         bootbox.confirm({
             title: "Do you really want to load a new class setup?",
@@ -332,6 +402,8 @@ $(document).ready(function() {
                     
                     initEmailList();
                     
+                    $('#show-origin').html('(<em>' + file.name + '</em>)');
+                    
                 });
                 reader.addEventListener('error', (e) => {
                     bootbox.alert({
@@ -345,21 +417,6 @@ $(document).ready(function() {
             }
         });
 
-
-
-
-
-
-
-
-
-
-
-
-        
-        
-        
-        
         me.value = null; // Otherwise you can't load the same file more times
         
     });
@@ -388,7 +445,7 @@ $(document).ready(function() {
               
         <div class="row">
           <div class="col-md-12">
-            <h5>Setup invitations</h5>
+            <h5>Setup invitations <span id="show-origin"></span></h5>
           </div>
         </div>
         <div class="row ">
@@ -399,8 +456,8 @@ $(document).ready(function() {
             </div>
             <div class="row mb-3" id="email-list-button-bar">
               <div class="col-md-12">
-                  <button id="save-to-file" class="btn btn-light btn-sm float-right">Save class setup to file</a>
-                  <button id="refresh-pins" class="btn btn-light btn-sm float-right" title="Regenerate invitation link codes invalidating current ones">Replace old invitation links</a>
+                  <button id="save-to-file" class="btn btn-light btn-sm float-right"><i class="fas fa-file-export"></i> Save class setup to file</a>
+                  <button id="refresh-pins" class="btn btn-light btn-sm float-right" title="Regenerate invitation link codes invalidating current ones"><i class="fas fa-key"></i> Replace old invitation links</a>
                   
               </div>
             </div>
@@ -416,9 +473,12 @@ $(document).ready(function() {
             </div>
             <div class="row">
               <div class="col-md-12">
-                <button id="add-email" class="btn btn-primary btn-sm ml-2 mt-2 mb-2 float-right">Add to the class</button>
-                <label for="load-from-file" id="load-from-file-label" class="btn btn-light btn-sm  mt-2 mb-2 float-right">Load class setup from file</label>
+                
+                <button id="add-email" class="btn btn-primary btn-sm ml-2 mt-2 mb-2 float-right"><i class="fas fa-user-plus"></i> Add to the class</button>
+                <label for="load-from-file" id="load-from-file-label" class="btn btn-light btn-sm  mt-2 mb-2 float-right"><i class="fas fa-file-import"></i> Load class setup from file</label>
                 <input type="file" id="load-from-file" style="display: none" accept=".rebooth">
+                
+                <button id="load-from-cookie" class="btn btn-light btn-sm ml-2 mt-2 mb-2 float-right"><i class="fas fa-sync"></i> Reload the last class you've used on this PC</button>   
                 
               </div>
             </div>
@@ -450,7 +510,7 @@ $(document).ready(function() {
 <?php
     if ($CONFIG['send_invitations']) {
 ?>
-                <button id="start-class" class="btn btn-success disabled w-100">Send invitations and load the class</button>
+                <button id="start-class" class="btn btn-success disabled w-100"><i class="fas fa-mail-bulk"></i>&nbsp; Send invitations and load the class</button>
 <?php
     } else {
 ?>
@@ -460,7 +520,7 @@ $(document).ready(function() {
 ?>
               </div>
               <div class="col-md-5">
-                <button id="start-class-no-invitations" class="btn btn-success w-100">Just load the class</button>
+                <button id="start-class-no-invitations" class="btn btn-success w-100"><i class="fas fa-door-open"></i>&nbsp; Just load the class</button>
               </div>
               
             </div>            
@@ -481,8 +541,8 @@ $(document).ready(function() {
 
       <div class="card-footer">
 
-        <a class="btn btn-sm btn-outline-dark" href="session">&rArr; Go (back) to the class and manually add new booths</a>
-        <a class="btn btn-sm btn-outline-dark" href="logout">&rArr; Logout</a>
+        <a class="btn btn-sm btn-outline-dark" href="session"><i class="fas fa-sign-in-alt"></i> Go (back) to the class and manually add new booths</a>
+        <a class="btn btn-sm btn-outline-dark" href="logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
       
       
       </div>
