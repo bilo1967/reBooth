@@ -1,6 +1,8 @@
 //
-// Common interface controls
+// Common interface controls, functions and constants
 //
+
+const noSrc = "https://:0/"; 
 
 //
 // Writes messages to #log-board-item
@@ -56,11 +58,14 @@ function updateClock(){
 
 function handleMediaSuccess(c) {
 
-    var videoDeviceId = c.video.deviceId.exact;
-    var audioDeviceId = c.audio.deviceId.exact;
+    var videoDeviceId = c.video.deviceId !== undefined ? c.video.deviceId.exact : 'default';
+    var audioDeviceId = c.audio.deviceId !== undefined ? c.audio.deviceId.exact : 'default';
     
     var videoDeviceDescr = $("#select-video-source option:selected").text().replace(/ *\([0-9a-z]+:[0-9a-z]+\)$/i, '');
     var audioDeviceDescr = $("#select-audio-source option:selected").text().replace(/ *\([0-9a-z]+:[0-9a-z]+\)$/i, '');
+    
+    if (videoDeviceDescr == '') videoDeviceDescr = 'default';
+    if (audioDeviceDescr == '') audioDeviceDescr = 'default';
     
     toastr.success(
         "Video device: &ldquo;" + videoDeviceDescr + "&rdquo;<br/>" +
@@ -69,8 +74,8 @@ function handleMediaSuccess(c) {
          {positionClass: "toast-middle", timeOut: 2000}
     );
 
-    console.log(`${videoDeviceId}:[${videoDeviceDescr}] => ` + $("#select-video-source").val() );
-    console.log(`${audioDeviceId}:[${audioDeviceDescr}] => ` + $("#select-audio-source").val() );
+    if (DebugLevel >= 3) console.log(`${videoDeviceId}:[${videoDeviceDescr}] => ` + $("#select-video-source").val() );
+    if (DebugLevel >= 3) console.log(`${audioDeviceId}:[${audioDeviceDescr}] => ` + $("#select-audio-source").val() );
     
     appendLog('Camera: ' + videoDeviceDescr, 'log-item-info');
     appendLog('Microphone: ' + audioDeviceDescr, 'log-item-info');
@@ -98,7 +103,7 @@ function handleMediaErrors(err, message) {
         break;
 
     default:
-        console.log("handleMediaErrors:", err, message);
+        console.warn("handleMediaErrors:", err, message);
         break;
     }
 }
@@ -376,17 +381,24 @@ function setVuMeter(stream, elem, options = {type: 'dbmeter', bars: 20, barSepWi
 // Sets the MediaStream as the video element src and draws a vumeter for it's audio
 function gotLocalMediaStream(stream) {
 
-    if (DebugMode) console.log("gotLocalMediaStream: begin");
+    if (DebugLevel >= 3) console.log("gotLocalMediaStream: begin");
 
     me.setMediaStream(stream);
     setVuMeter(stream, $("#vumeter").get(0));
     window.stream = stream;
     
-    if (DebugMode) console.log("gotLocalMediaStream: end");
+    if (DebugLevel >= 3)  console.log("gotLocalMediaStream: end");
     
     // Pass argument to next element in promise chain
     //return navigator.mediaDevices.enumerateDevices();  
     return stream;
+}
+
+//refreshes the PHP session every t minutes (default=5)
+function keepAliveSession(t = 5) {
+    setInterval( function() {
+        $.post('actions/keepalive.php');
+    }, t * 60000); 
 }
 
     
