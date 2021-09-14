@@ -1,3 +1,14 @@
+## [v0.8.3]
+Many minor fixes
+File manager content syncronization between concurrent sessions
+Regression fixed on session timeout handling
+
+## [v0.8.2]
+Enhanced session timeout 
+
+## [v0.8.1]
+Debug messages can now be logged to server (no need to collect them from teacher and booths)
+
 ## [v0.8.0]
 In "class call" mode it is now possible to talk to a single booth and to broadcast its audio to the others. A single booth can talk at a time but everybody now can listen to it.
 
