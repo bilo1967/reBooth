@@ -1,10 +1,18 @@
 <?php
+// Load configuration
+include_once dirname(__FILE__) . "/config/config.inc.php";
+
 header('Content-Type: text/html; charset=utf-8');
 
-session_start();
+if (isset($CONFIG['php_session_timeout']) && $CONFIG['php_session_timeout'] > 0) {
+    // Set the maxlifetime of session
+    ini_set("session.gc_maxlifetime",  $CONFIG['php_session_timeout']);
 
-// Libreria per verificare un account UniBo tramite IMAP
-include_once dirname(__FILE__) . "/config/config.inc.php";
+    // Also set the session cookie timeout to 0 (until the browser is closed)
+    ini_set("session.cookie_lifetime", 0);
+}
+
+session_start();
 
 $errMsg = '';
 
@@ -55,6 +63,12 @@ if (isset($_POST['login']) && !empty($_POST['login'])) {
             @mkdir($home, 0771, true);
             if (!is_dir($home)) throw new Exception("Can't create working directory '$home' for $user");
             if (!is_writable($home)) throw new Exception("$user working directory is not writable"); 
+
+            // We also create the log directory
+            $log = $CONFIG['data_path'] . "/$user/" . $CONFIG['log_folder'];
+            @mkdir($log, 0771, true);
+            if (!is_dir($log)) throw new Exception("Can't create log directory for $user");
+            if (!is_writable($log)) throw new Exception("$user log directory is not writable");
             
             // We also create temp directory and delete all files
             $temp = $CONFIG['data_path'] . "/$user/" . $CONFIG['temp_folder'];
