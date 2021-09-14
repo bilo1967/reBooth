@@ -6,6 +6,12 @@
 
     require_once dirname(__FILE__) . "/../config/config.inc.php";
 
+    function randomPwd() {
+        $permitted_chars = '0123456789abcdefghijklmnopqrstuvwxyz';
+        return substr(str_shuffle($permitted_chars), 0, 8);
+    }
+
+
     $pwdfile = $CONFIG['data_path'] . "/rebooth.guests.json";
 
     $shortopts  = "u:p:e:dl";
@@ -48,7 +54,7 @@
         echo "       (list guests)" . PHP_EOL . PHP_EOL;
         echo "Options:" . PHP_EOL;
         echo "    -u username: specify username" . PHP_EOL;
-        echo "    -p password: specify (unencrypted) password" . PHP_EOL;
+        echo "    -p password: specify a password (unencrypted, use - to generate a random one)" . PHP_EOL;
         echo "    -e days: specify credentials expiry in days from now (default=7, 0=expire now)" . PHP_EOL;
         echo "    -d: delete guest specified by -u" . PHP_EOL;
         echo "    -l: list guests" . PHP_EOL;
@@ -79,6 +85,12 @@
             $users[$user] = array('hash' => null, 'expiry' => time() + 7*24*3600);
         }
         if ($pass) {
+
+            if ($pass == '-') {
+                $pass = randomPwd();
+                echo "u:$user p:$pass\n";
+            }
+
             $users[$user]['hash'] = password_hash($pass, PASSWORD_DEFAULT);
         }
         if ($expiry) {
