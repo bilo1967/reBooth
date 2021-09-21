@@ -24,6 +24,9 @@ const BoothPollingInterval = 3210;
 // Allowed uploadable media files
 const AllowedMediaFileExtensions = ['wav','mp3','mpeg3','ogg','m4a','mp4','m4v'];
 
+// Prefix to use to name booths added at class time (will prefix a number)
+const classTimeBoothNamePrefix = "student@booth.n";
+
 
 // Teacher PC has to handle several upstream and downstream connections
 // Tipically downstream band is larger than upstream so it make sense to
