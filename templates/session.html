@@ -15,25 +15,21 @@
   <link rel="shortcut icon" href="/images/icons/favicon.ico">
   
   
-  <!--script src="https://kit.fontawesome.com/ea65ac0a48.js"></script-->
-  <!--link href="/js/fontawesome/css/all.min.css" rel="stylesheet"-->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/css/all.min.css" integrity="sha256-h20CPZ0QyXlBuAw7A+KluUYx/3pK+c7lYEpqLTlxjYQ=" crossorigin="anonymous" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/js/fontawesome.min.js" integrity="sha256-NP9NujdEzS5m4ZxvNqkcbxyHB0dTRy9hG13RwTVBGwo=" crossorigin="anonymous"></script>  
   
   
   <!-- Bootstrap 4.4.1 -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha256-L/W5Wfqfa0sdBNIKN9cG6QA5F2qx4qICmU2VgLruv9Y=" crossorigin="anonymous" />
-  <!--link rel="stylesheet" href="css/bootstrap.min.css" /-->
   
   <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
 
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha256-WqU1JavFxSAMcLP2WIOI+GB2zWmShMI82mTpLDcqFUg=" crossorigin="anonymous"></script>
-  <!--script src="js/bootstrap.min.js"></script--> <!-- Bootstrap 4.4.1 -->
   
   <!-- ReBooth -->
-  <link rel="stylesheet" href="css/rebooth.css?0.10">
+  <link rel="stylesheet" href="css/rebooth.css?0.03">
 
   
   <!-- https://github.com/daneden/animate.css -->
@@ -52,7 +48,8 @@
   
   <script src="js/myrecorder.js"></script>
   <script src="js/mychrono.js"></script>
-  <script src="js/log.js"></script>  
+  <script src="js/log.js"></script>
+  <script src="js/emojiPicker.js"></script>
   
   
   <!--script src="js/bootstrap4-input-clearer.min.js"></script-->
@@ -69,7 +66,7 @@
   <script src="config/config.js?0.11"></script>
   <script src="js/rebooth.js?0.06"></script>
   
-  <script src="js/rebooth-file-manager.js?0.05"></script>
+  <script src="js/rebooth-file-manager.js?0.06"></script>
 
   <script src="js/common.js?0.01"></script>
 
@@ -78,6 +75,27 @@
   
   
 <style>
+
+#shrink-booths:hover, #enlarge-booths:hover {
+    opacity: 1;
+}
+#shrink-booths, #enlarge-booths {
+    opacity: 0.75;
+}
+
+
+.btn-group-xs > .btn, .btn-xs {
+  padding-left: .1rem;
+  padding-right: .15rem;
+  padding-top: .1rem;
+  padding-bottom: .25rem;
+  font-size: .875rem;
+  line-height: .5;
+  border-radius: .2rem;
+}
+
+.video-normal {
+}
 
 #teacher {
     position: absolute;
@@ -104,7 +122,11 @@
 }
 
 
-
+.booth-header {
+    height: 24px !important;
+    font-size: 0.9rem !important;
+    padding-top: 1px !important;
+}
 
 
 .file-item:hover {
@@ -119,10 +141,6 @@
 
 
 body {
-/*
-    background-color: #7a7adb;
-    background-image: linear-gradient(0deg, #7a7adb 0%, #170e13 74%);
-*/
     background: url(images/bg10.jpg) no-repeat center center fixed;
     background-size: cover;
 }
@@ -134,13 +152,11 @@ body {
     color: white;
 }
 
-.normal-video-controls {
+.booth-video-container {
     position: absolute;
-    top:0;
-    left:0;
-    width: 100%;
     background: transparent;
-    height: var(--normal-video-height);
+    width: 100%;
+    height: var(--video-height);
 }
 
 /* vertical overflow scroller at left */
@@ -320,8 +336,16 @@ class SessionToken {
 
 
 
-
 $(document).ready(function() {
+
+    $('#emoji-picker').emojiPicker('chat-text', {
+        classes: 'border rounded text-center p-1 mb-1',
+        css: {
+            background: '#F0F0FF',
+            width: "auto",
+        },
+        position: 'top-right',        
+    });
 
     recordingIds = new SessionIdGenerator(RecIdPrefix);
     
@@ -329,7 +353,11 @@ $(document).ready(function() {
     keepAliveSession(); // keep alive PHP session 
 
     // Bootstrap custom tooltips
-    $('[data-tooltip="tooltip"]').tooltip(); 
+    $('[data-tooltip="tooltip"]').tooltip({container: 'body'}); 
+    $('body').tooltip({selector: '.show-tooltip'});
+    $(document).on('click', function() {
+        $('[data-tooltip="tooltip"]').tooltip('hide');
+    }); 
     $("input[data-tooltip='tooltip']").mouseout(function(){
       $(this).tooltip('hide');
     });    
@@ -519,12 +547,104 @@ $(document).ready(function() {
     //$(function() {
     //    $('.clearer').clearer();
     //});
+/*    
+    function viewportHeight($el) {
+        var elH = $el.outerHeight(),
+            H   = $(window).height(),
+            r   = $el[0].getBoundingClientRect(), t=r.top, b=r.bottom;
+        return Math.max(0, t>0? Math.min(elH, H-t) : Math.min(b, H));
+    }
+*/
+    $('#enlarge-booths').on('click', function() {
+        const defaultWidth = parseInt(getComputedStyle($("body").get(0)).getPropertyValue('--default-video-width'));
+        const defaultHeight = parseInt(getComputedStyle($("body").get(0)).getPropertyValue('--default-video-height'));
+        const aspectRatio = defaultWidth / defaultHeight;
+        const largeWidth = parseInt(getComputedStyle($("body").get(0)).getPropertyValue('--large-video-width'));
+
+    
+        var w = parseInt(getComputedStyle($("body").get(0)).getPropertyValue('--video-width')) + 10;
+        var h = parseInt(w / aspectRatio);
+        
+        if (w > largeWidth) return;
+        
+        $("body").get(0).style.setProperty("--video-width", w );
+        $("body").get(0).style.setProperty("--video-height", h );
+    
+    });
+    $('#shrink-booths').on('click', function() {
+    
+        const defaultWidth = parseInt(getComputedStyle($("body").get(0)).getPropertyValue('--default-video-width'));
+        const defaultHeight = parseInt(getComputedStyle($("body").get(0)).getPropertyValue('--default-video-height'));
+        const aspectRatio = defaultWidth / defaultHeight;
+        const minWidth = parseInt(getComputedStyle($("body").get(0)).getPropertyValue('--tiny-video-width'));
+    
+        var w = parseInt(getComputedStyle($("body").get(0)).getPropertyValue('--video-width')) - 10;
+        var h = parseInt(w / aspectRatio);
+        
+        if (w < minWidth) return;
+        
+        $("body").get(0).style.setProperty("--video-width", w );
+        $("body").get(0).style.setProperty("--video-height", h );
+    });
+    
+    function resizeBooths() {
+    
+        const defaultWidth = parseInt(getComputedStyle($("body").get(0)).getPropertyValue('--default-video-width'));
+        const defaultHeight = parseInt(getComputedStyle($("body").get(0)).getPropertyValue('--default-video-height'));
+        const aspectRatio = defaultWidth / defaultHeight;
+        const minWidth = parseInt(getComputedStyle($("body").get(0)).getPropertyValue('--tiny-video-width'));
+        
+        // number of booths to display
+        var count = invitations.length;
+    
+
+        // current booth element width and margins
+        var boothWidth = $('.connection').outerWidth();
+        var boothHMargin = $('.connection').outerWidth(true) - boothWidth;
+        var boothHeight = $('.connection').outerHeight();
+        var boothVMargin = $('.connection').outerHeight(true) - boothHeight;
+
+
+        // visible client area of booths container
+        var w = $('#booths').width();
+        var h = $('#booths').height();
+
+        // given current booth size the booth container can display a c*r grid of booths without scrolling
+        var c = parseInt(w / (boothWidth  + boothHMargin));
+        var r = parseInt(h / (boothHeight + boothVMargin));
+        var maxCount =  c * r;
+
+
+
+        if (count > c * r) {
+            // we have more booths than those we can display without scrolling, so we need to resize 
+            // we add one column, keeping the same rows and resize booths accordingly
+        
+            var newBoothWidth = parseInt(w / (c + 1)) - boothHMargin;
+            
+            if (newBoothWidth < minWidth) return;
+            
+            var videoHeight = parseInt($('.video-normal').height());
+            
+            // we resize only the video part of the booth, since header and footer are fixed
+            var newVideoHeight = parseInt(newBoothWidth / aspectRatio);
+            
+            $("body").get(0).style.setProperty("--video-width", newBoothWidth );
+            $("body").get(0).style.setProperty("--video-height", newVideoHeight );
+            
+            resizeBooths();
+        } 
+    }
+
+    $( window ).resize(function() {
+        resizeBooths();
+    });
     
    
     
     function addBoothElem(pin, n, email) {
     
-        if (email == "" || typeof email == 'undefined') email = "student@booth.n" + n;
+        if (email == "" || typeof email == 'undefined') email = classTimeBoothNamePrefix + n;
     
         let invitationLink = boothURL + "?pin=" + pin + "&t=" + userName + (classCode != '' ? '&c='+classCode : '') + "&s=" + email;
     
@@ -538,12 +658,12 @@ $(document).ready(function() {
         $('#booths').append(elem);
         
         // Set various IDs for current booth
-        $('#booth-'+pin+" .normal-video-controls").prop('id', 'booth-video-controls-' + pin);
+        $('#booth-'+pin+" .booth-video-container").prop('id', 'booth-video-controls-' + pin);
         $('#booth-'+pin+" video").prop('id', 'booth-video-' + pin);
         $('#booth-'+pin+" video").prop('poster', 'images/booth-' + n + '.png');
         
         $('#booth-'+pin+" .card-header").prop('id', 'booth-header-' + pin).data('ord', n);
-        $('#booth-'+pin+" .booth-name").prop('id', 'booth-name-' + pin).html("Booth n&#186; " + n);
+        $('#booth-'+pin+" .booth-name").prop('id', 'booth-name-' + pin).html("Booth n&#186; " + n).tooltip({title: email, placement: 'top'});
         
         $('#booth-'+pin+" .invitation-link")
             .prop('id', 'invitation-link-' + pin)
@@ -569,11 +689,16 @@ $(document).ready(function() {
         
     }
     
+    
+  
 
     function initBooths() {
         booths = [];
         let i = 1;
         $('#booths').html('');
+        
+        
+        
         invitations.forEach((invitation) => {
         
             let pin = invitation.pin;
@@ -587,12 +712,9 @@ $(document).ready(function() {
             
             i++;
         });
-        
-        // Load custom tooltips for new DOM elements
-        $('[data-tooltip="tooltip"]').tooltip();
-        $("input[data-tooltip='tooltip']").mouseout(function(){
-          $(this).tooltip('hide');
-        });    
+
+
+        resizeBooths();
         
     }
     
@@ -609,11 +731,7 @@ $(document).ready(function() {
 
         addBoothElem(newpin, invitations.length , "");
         
-        $('[data-tooltip="tooltip"]').tooltip();
-        $("input[data-tooltip='tooltip']").mouseout(function(){
-          $(this).tooltip('hide');
-        });    
-        
+        resizeBooths();
         
         me.addBooth(newpin, $('#booth-video-' + newpin)[0]);
         
@@ -652,7 +770,7 @@ $(document).ready(function() {
                     appendLog(who + " has joined the class (" + d.toTimeStamp() + ")");
                     
                     $('#booth-header-' + pin).removeClass('bg-info').addClass('bg-primary');
-                    $('#booth-name-'+pin).html(who);
+                    $('#booth-name-'+pin).html(who).tooltip({html: true, title: who, placement: 'top' });
                     
                     $('#booth-'+pin+" .take-snapshot").addClass('cursor-pointer');
                     $('#booth-'+pin+" .kick-out").addClass('cursor-pointer').removeClass('disabled');
@@ -697,7 +815,7 @@ $(document).ready(function() {
                     }
                     
                     $('#booth-header-' + pin).removeClass('bg-primary').addClass('bg-info');
-                    $('booth-name-'+pin).html("Booth n&#186; " + $('#booth-header-' + pin).data('ord'));
+                    $('booth-name-'+pin).html("Booth n&#186; " + $('#booth-header-' + pin).data('ord')).tooltip({html: true, title: who, placement: 'top' });
                     $('#booth-'+pin+' .booth-mini-log').html('');
                     $('#booth-'+pin+' .take-snapshot').removeClass('cursor-pointer');
                     $('#booth-'+pin+' .kick-out').removeClass('cursor-pointer').addClass('disabled');
@@ -724,6 +842,7 @@ $(document).ready(function() {
 
                     if (data.chat) {
                     
+console.log(">>>>>> pin:" + pin + ", who:" + who);
                         animateCSS('#send-chat-text', 'heartBeat');
                         
                         if ($('#shared-chat').prop("checked") == true) {
@@ -735,9 +854,12 @@ $(document).ready(function() {
                             });
                         }
 
-                        let n = who.indexOf("@");
-                        if (n > 0) who = who.substr(0, n);
-                        who = who.trunc(15);  
+//                      if (! who.startsWith(classTimeBoothNamePrefix)) {
+//                          let n = who.indexOf("@");
+//                          if (n > 0) who = who.substr(0, n);
+//                          who = who.trunc(15);
+//                      }
+                        who = who + ""; // cast to string
                         
 /*      
                         let t = "<span style='color: purple'><b>" + who + "</b>&gt; " + data.chat.text + "</span>";
@@ -2298,11 +2420,11 @@ $(".booth-signal").html("");
     function clearAllFlags(pin = false) {
     
         if (!pin) {
-            $('.normal-video-controls').css('background', 'transparent');
+            $('.booth-video-container').css('background', 'transparent');
             $('.booth-flags').html('');
             
         } else {
-            $('#booth-' + pin + ' .normal-video-controls').css('background', 'transparent');
+            $('#booth-' + pin + ' .booth-video-container').css('background', 'transparent');
             $('#booth-' + pin + ' .booth-flags').html('');
         }
     }
@@ -2461,7 +2583,8 @@ function logToServer(timeStamp, logLevel, script, line, column, log) {
               <button  id="logoff" class="btn btn-sm btn-warning mr-1">End the class</button>
               <button  id="quit"   class="btn btn-sm btn-danger mr-1">Quit and create another class</button>
               
-              <button id="config-button" class="ml-1 float-right btn btn-info" data-toggle_="modal" data-target_="#config-panel"><i class="fas fa-cogs"></i></button>
+              
+              <button id="config-button" class="ml-1 float-right btn btn-info" data-tooltip="tooltip" title="Show configuration panel"><i class="fas fa-cogs"></i></button>
 
               <button id="add-booth"     class="ml-1 float-right btn btn-secondary" data-tooltip="tooltip" title="Add another booth"><i class="fas fa-plus-circle"></i></button>
 
@@ -2482,7 +2605,7 @@ function logToServer(timeStamp, logLevel, script, line, column, log) {
                     <div class="d-flex">
                       <div class="mr-1">
                         <label for="open-file-manager-button" class="label-tiny text-dark">Load</label>
-                        <button  id="open-file-manager-button" class="player-control btn btn-success btn-main-toolbar" data-toggle="modal" data-target="#file-manager">
+                        <button  id="open-file-manager-button" class="player-control btn btn-success btn-main-toolbar" data-toggle="modal" data-target="#file-manager" data-html="true" data-tooltip="tooltip" title="Open the file manager and send a media file to connected booths.<br>It won't be played until you press play or start a sim/cons">
                           <i class="fas fa-folder-open"></i>
                         </button>
                       </div>
@@ -2603,12 +2726,12 @@ function logToServer(timeStamp, logLevel, script, line, column, log) {
   
                   <div class="">
                     <label for="simultaneous-batch" class="label-tiny text-dark">Sim. session</label>
-                    <a id="simultaneous-batch" style="wiadth: 6.5rem" class="w-100 btn btn-success  btn-sm di-sabled" href="">Start sim.</a>
+                    <a id="simultaneous-batch" style="wiadth: 6.5rem" class="w-100 btn btn-success  btn-sm" href="" data-tooltip="tooltip" title="Start a simultaneous interpreting session and automatically record booth outputs">Start sim.</a>
                   </div>
                   
                   <div class="mt-auto">
                     <label for="consecutive-batch" class="label-tiny text-dark ">Cons. session</label>
-                    <a id="consecutive-batch" style="wiadth: 6.5rem" class="w-100 btn btn-sm btn-success di-sabled" href="">Start cons.</a>
+                    <a id="consecutive-batch" style="wiadth: 6.5rem" class="w-100 btn btn-sm btn-success" href="" data-tooltip="tooltip" title="Start a consecutive interpreting session and automatically record booth outputs">Start cons.</a>
                   </div>
   
                   <div class="rounded border bg-success text-light w-100 h-100 hide" style="position: absolute; left: 0; top: 0" id="batch-display">
@@ -2641,7 +2764,7 @@ function logToServer(timeStamp, logLevel, script, line, column, log) {
                 <div> 
                   <label for="class-call" class="label-tiny text-dark">Class call</label>
                   <button id="class-call" style="font-size: 1.5rem;" class="btn btn-warning ml-1">
-                    <i class="fas fa-bullhorn" style="color: yellow" data-tooltip="tooltip" title="Class call"></i>  
+                    <i class="fas fa-bullhorn" style="color: yellow" data-tooltip="tooltip" title="Class call (talk to the booths)"></i>  
                   </button>
                 </div>
               </div>            
@@ -2669,9 +2792,20 @@ function logToServer(timeStamp, logLevel, script, line, column, log) {
     
     <div class="row">
       <div class="col-sm-9" style="height: calc(100vh - 200px); overflow-y: auto">
-      
+
+<div 
+    style="position: absolute; left: 1px; top: calc( 50% - 0.85rem - 1px ); height: calc( 1.7rem + 2px );">
+    <button title="Enlarge booths" class="btn btn-xs btn-outline-light" style="width: 1rem; margin-bottom: 1px" id="enlarge-booths" data-tooltip="tooltip">+</button><br/>        
+    <button title="Shrink booths"class="btn btn-xs btn-outline-light" style="width: 1rem; margin-top: 1px" id="shrink-booths" data-tooltip="tooltip">-</button><br/>
+</div>      
         <!-- BOOTHS HERE!!! -->
-        <div class="d-flex flex-wrap justify-content-center p-1" id="booths">      
+        <div class="d-flex flex-wrap align-content-start justify-content-center h-100 p-0 m-0"  id="booths">
+
+
+
+
+
+        
         </div>
         
       </div>
@@ -2682,7 +2816,7 @@ function logToServer(timeStamp, logLevel, script, line, column, log) {
             Chat&nbsp;
             <div class="float-right">
             
-                <div style="" class="custom-control custom-control-right custom-checkbox custom-control-inline" data-tooltip="tooltip" title="Share the chat with all the booths">
+                <div style="" class="custom-control custom-control-right custom-checkbox custom-control-inline" data-tooltip="tooltip" data-html="true" title="<b>Checked</b><br>all messages are public.<br><b>Unchecked</b><br>booth messages readable only by teacher, teacher messages public">
                     <input type="checkbox" class="custom-control-input " id="shared-chat" checked />
                     <label class="custom-control-label" for="shared-chat">Shared</label>
                 </div>
@@ -2698,14 +2832,32 @@ function logToServer(timeStamp, logLevel, script, line, column, log) {
             
             
           </div>
-          <div class="card-body" id="chat-board" style="padding: 4px;overflow-y: scroll; max-height: calc(100vh - 295px); height: calc(100vh - 295px)"></div>
-          <div class="card-footer" style="padding: 4px">
+          <div class="card-body" id="chat-board" style="padding: 4px;overflow-y: scroll; max-height: calc(100vh - 270px); height: calc(100vh - 270px)"></div>
+
+          <div class="card-footer border-top-0 p-0">
+          
             <div class="form-inline" >
-              <input type="text"  class="form-control" id="chat-text" style="width: calc(100% - 5.6rem)" placeholder="Type text here...">
-              <button  id="send-chat-text" class="btn btn-primary ml-auto" style="width:2.5rem"><i class="far fa-paper-plane" style="margin-left:-2px" ></i></button>
-              <label id="send-file-to-booths-button" data-tooltip="tooltip" class="ml-1 btn btn-small btn-success" title="Send a document to each already connected booth" style="width:2.5rem" for="send-file-to-booths">
+            
+              <div class="input-group w-100">
+                <div class="input-group-prepend">
+                    <div class="input-group-text cursor-pointer unselectable pl-1 pr-1" id="emoji-picker"><i class="far fa-smile"></i></div>
+                </div>
+                <input type="text"  class="form-control" id="chat-text" placeholder="Type text here...">
+                
+                <div class="input-group-append">
+                
+                  <button  id="send-chat-text" class="bg-primary text-light input-group-text p-1" data-tooltip="tooltip" title="Send a message to each connected booth" style="width: 1.75rem"><i class="far fa-paper-plane"></i></button>                
+                
+                  <label id="send-file-to-booths-button" class="cursor-pointer input-group-text p-1 bg-success text-light" style="width: 1.75rem" data-tooltip="tooltip" title="Send a document to each connected booth" for="send-file-to-booths"><i class="fas fa-file-upload"></i></label>
+                </div>
+                
+              </div>
+              
+              <!--button  id="send-chat-text" class="hide btn btn-primary ml-auto" style="width:2.5rem" data-tooltip="tooltip" title="Send a message to each connected booth"><i class="far fa-paper-plane" style="margin-left:-2px" ></i></button-->
+              
+              <!--label _id="send-file-to-booths-button" data-tooltip="tooltip" class="ml-auto btn btn-small btn-success" title="Send a document to each connected booth" style="width:2rem" for="send-file-to-booths">
                 <i class="fas fa-file-upload"></i>
-              </label>
+              </label-->
               <input type="file" name="file" id="send-file-to-booths" class="hidden-input" />
             </div>  
 
@@ -2736,40 +2888,40 @@ function logToServer(timeStamp, logLevel, script, line, column, log) {
 
   <!-- BOOTH PROTOTYPE: BEGIN -->
   <div id="connection-prototype" class="connection ml-1 mb-1" style="display: none">
-    <div class="card w-100 border rounded " >
+    <div class="card w-100 border rounded">
     
-      <div class="card-header text-white bg-info">
-        <span class="invitation-link float-left mt-1 unselectable cursor-pointer" style="display:inline-block" data-tooltip="tooltip" title="Click to copy the invitation link"><i class="fas fa-link"></i></span>
-        <span class="booth-name float-left ml-1 ellipsis"></span>&nbsp;
-        <span class="take-snapshot float-right unselectable mt-1" data-tooltip="tooltip" title="Take a snapshot" style="display:inline-block"><i class="fas fa-camera"></i></span>&nbsp;
+      <div class="card-header text-white bg-info booth-header">
+        <span class="invitation-link float-left mt-1 unselectable cursor-pointer show-tooltip" style="display:inline-block" data-tooltip="tooltip" title="Click to copy the invitation link"><i class="fas fa-link"></i></span>
+        <span class="booth-name float-left ml-1 ellipsis unselectable show-tooltip" data-html="true" data-placement="top" data-tooltip="tooltip"></span>&nbsp;
+        <span class="take-snapshot float-right unselectable mt-1 show-tooltip" data-tooltip="tooltip" title="Take a snapshot" style="display:inline-block"><i class="fas fa-camera"></i></span>&nbsp;
       </div>
       
       <div class="card-body position-relative">
-        <div class="normal-video-controls d-flex justify-content-center align-items-center mb-1" >
-          <div class="booth-connection  w-100 h-100 "></div>
+        <div class="booth-video-container d-flex justify-content-center align-items-center mb-1" >
+          <div class="booth-connection "></div>
           <div class="booth-signal absolute-middle"></div>
           <div class="booth-flags absolute-middle" ></div>
           <div class="listen-to-booth-indicator text-brightred" style="position: absolute; top: 2px; right: 2px;" role="status"></div>
           <div class="talk-to-booth-indicator text-warning" style="position: absolute; top: 2px; left: 2px;" role="status"></div>
-          <div class="booth-mini-log ellipsis label-small  ml-1 mr-1" style="position: absolute; bottom: 1px; left: 1px"></div>
+          <div class="booth-mini-log ellipsis label-small m-l-1 m-r-1" style="position: absolute; bottom: 1px; left: 1px; right: 1px"></div>
         </div>
         
         <div class="d-flex justify-content-center mb-0">
-          <video class="video-normal booth-video cursor-pointer"
+          <video class="video-normal booth-video cursor-pointer show-tooltip"
              disablePictureInPicture 
              width="240" height="180"
              data-tooltip="tooltip" title="Click to listen to/mute the booth."></video>
-        </div>
+         </div>
       </div>
       
       <div class="card-footer d-flex justify-content-between align-items-center">
           <div class="">
-            <button class="talk-to-booth btn btn-sm btn-success disabled" data-tooltip="tooltip" title="Talk to the booth"><i class="fas fa-headset"></i></button>
+            <button class="talk-to-booth btn btn-sm btn-success disabled show-tooltip" data-tooltip="tooltip" title="Talk to the booth"><i class="fas fa-headset"></i></button>
             &nbsp;
           </div>
           <div class="">
-            <button class="disabled kick-out btn btn-sm btn-danger text-light" data-tooltip="tooltip" title="Force disconnection if connection is stuck"><i class="fas fa-skull"></i></button>
-            <a class="disabled download-booth-recording btn btn-sm btn-success" download data-tooltip="tooltip" title="download audio recording"><i class="fas fa-save"></i></a>
+            <button class="disabled kick-out btn btn-sm btn-danger text-light show-tooltip" data-tooltip="tooltip" title="Force disconnection if connection is stuck"><i class="fas fa-skull"></i></button>
+            <a class="disabled download-booth-recording btn btn-sm btn-success show-tooltip" download data-tooltip="tooltip" title="download audio recording"><i class="fas fa-save"></i></a>
           </div>
       </div>
     </div>
@@ -2796,7 +2948,7 @@ function logToServer(timeStamp, logLevel, script, line, column, log) {
         </button>
       </div>
       <div class="modal-body">
-        <div class="text-center w-100" style="position:absolute;top:0;left:0; font-size: 0.9rem">Upload media files to the server and send them to the booths by clicking on the <i class="far fa-hand-point-right"></i> icon&hellip;</div>
+        <div class="text-center w-100" style="position:absolute;top:0;left:0; font-size: 0.9rem">Upload media files to the server. Send them to the booths by clicking on the <i class="far fa-hand-point-right"></i> icon&hellip;</div>
         <div class="m-2 bg-light" id="file-list" style="height: 252px; overflow-y: scroll; position: relative;">
         
         
@@ -2805,11 +2957,11 @@ function logToServer(timeStamp, logLevel, script, line, column, log) {
         
             <div class="d-flex" >
               <div class="custom-file">
-                <input type="file" class="custom-file-input" id="file-upload" name="file-upload" accept="">
+                <input data-tooltip="tooltip" title="" type="file" class="custom-file-input cursor-pointer" id="file-upload" name="file-upload" accept="">
                 <label class="custom-file-label" for="file-upload" >Choose file</label>
               </div>
               
-              <button class="btn btn-success ml-1" style="width: 8.5rem" id="file-upload-button">Upload</button>
+              <button class="btn btn-success ml-1" style="width: 8.5rem" id="file-upload-button" data-tooltip="tooltip" title="Upload the selected file to the server">Upload</button>
                 
             </div>
         
@@ -2817,7 +2969,7 @@ function logToServer(timeStamp, logLevel, script, line, column, log) {
         <div class="m-2 p-2 bg-light" id="file-manager-log"></div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-outline-success float-left"  id="file-list-refresh-button"><i class="fas fa-sync"></i> &nbsp; Refresh list</button>
+        <button class="btn btn-outline-success float-left"  id="file-list-refresh-button" data-html="true" data-tooltip="tooltip" title="Refresh the file list (may be needed if you've uploaded a file in another class)"><i class="fas fa-sync"></i> &nbsp; Refresh list</button>
       
         <button type="button" class="btn btn-secondary" data-dismiss="modal" id="file-manager-close-button-2">Close</button>
       </div>
