@@ -1,7 +1,8 @@
 ## [v0.8.4]
 Improvements to the chat system (the most visible is the emoji picker).  
 More tooltips have been added.  
-Minor code cleanup.
+Minor code cleanup.  
+Removed unneeded javascript library.
 
 ## [v0.8.3]
 Many minor fixes.
