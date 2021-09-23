@@ -26,10 +26,10 @@ $(document).ready(function() {
                     data.Data.forEach(f => { 
                         let t =
                         '<div class="input-group file-item unselectable mb-1" id="file-item-' + i + '" data-filename="' + f.name  + '">' +
-                        '  <div class="file-item-select input-group-prepend input-group-text unselectable cursor-pointer text-light bg-success" title="Send this file to the booths"><i class="far fa-hand-point-right"></i></div>' +
+                        '  <div class="file-item-select input-group-prepend input-group-text unselectable cursor-pointer text-light bg-success show-tooltip" data-html="true" title="Send this file to the booths.<br>It may take a while."><i class="far fa-hand-point-right"></i></div>' +
                         '  <div class="file-item-description form-control ellipsis "><b>' + f.name + '</b> (<i>' + (f.size).toLocaleString('en') + '</i> bytes)</div>' +
                         '  <div class="input-group-append">' +
-                        '    <span class="file-item-delete input-group-text unselectable cursor-pointer bg-warning" title="delete this file">&times;</span>' +
+                        '    <span class="file-item-delete input-group-text unselectable cursor-pointer bg-warning show-tooltip" title="delete this file">&times;</span>' +
                         '  </div>'+
                         '</div>';
                         i++;
