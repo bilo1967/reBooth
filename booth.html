@@ -55,8 +55,10 @@
   <script src="js/myrecorder.js"></script>
   <script src="js/mychrono.js"></script>  
   <script src="js/log.js?0.0"></script>  
+  
+  <script src="js/emojiPicker.js"></script>
 
-  <link rel="stylesheet" href="css/rebooth.css?v0.6">
+  <link rel="stylesheet" href="css/rebooth.css?v0.7">
   <script src="config/config.js?0.11"></script>
   <script src="js/rebooth.js?v0.7"></script>
   
@@ -90,7 +92,7 @@ body {
     left:0;
     width: 100%;
     background: transparent;
-    height: var(--normal-video-height);
+    height: var(--video-height);
 }
 
 .log-item-info {
@@ -228,6 +230,22 @@ function logToServer(timeStamp, logLevel, script, line, column, log) {
 
 
 $(document).ready(function() {
+
+
+    $('#emoji-picker').emojiPicker('chat-text', {
+        classes: 'border rounded text-center',
+        css: {
+            margin: "1px",
+            background: '#F0F0FF',
+            width: "auto",
+        },
+        emojiCSS: {
+            'font-size': "20px",
+            padding: "1px",
+        },
+        position: 'top-right',        
+    });
+
 
     // Bootstrap custom tooltips
     $('[data-toggle="tooltip"]').tooltip();
@@ -436,9 +454,10 @@ $(document).ready(function() {
                 
                 //let t = "";
                 if (who) {
-                    let n = who.indexOf("@");
-                    if (n > 0) who = who.substr(0, n);
-                    who = who.trunc(15);
+//                  let n = who.indexOf("@");
+//                  if (n > 0) who = who.substr(0, n);
+//                  who = who.trunc(15);
+                    who = who + ""; // cast to string
                     
                     //t = "<span style='color: brown'><b>" + who + "</b>&gt; " + data.chat.text + "</span>";
                 } else {
@@ -1649,12 +1668,12 @@ console.log(audioPlayer.src);
   <div class="container-fluid" style="">
     <div class="row mb-2 head-panel">
     
-      <div class="col-sm-2 d-flex flex-column">
+      <div class="col-sm-2 d-flex flex-column p-0">
 
 
         <!--div class="display text-center w-100 align-self-start" id="application-name" style="color: #FFFFD0">ReBooth</div-->
         
-        <div class="display d-flex align-self-stretch h-100  align-content-center  rounded ml-1 mt-2 mb-2" style="background-color: rgba(255,255,255,0.1)">
+        <div class="display d-flex align-self-stretch h-100  align-content-center  rounded ml-2 mt-2 mb-2 mr-0" style="background-color: rgba(255,255,255,0.1)">
           <div class="align-self-center text-center w-100" >  
             <span style="font-size: 1.3rem; color: #FFFFD0" id="application-name">App</span><br/>
             <span style="font-size: 2.25rem" id="time">h:mm</span><br/>
@@ -1729,8 +1748,8 @@ console.log(audioPlayer.src);
       
       
       
-      <div class="col-sm-1 text-right">
-        <div class="w-100 mt-2">
+      <div class="col-sm-1 text-right p-0">
+        <div class="w-100 mt-2 pr-2">
           <button id="config-button" class="btn btn-lg btn-info" data-to-ggle="modal" data-ta-rget="#config-panel" data-tooltip="tooltip" title="Setup your media devices"><i class="fas fa-cogs"></i></button>
         </div>
          
@@ -1740,7 +1759,7 @@ console.log(audioPlayer.src);
 
 
     <div class="row" style="">
-      <div class="col-sm-8 d-flex flex-column" >
+      <div class="col-sm-8 d-flex flex-column pl-1 pr-1 pt-0 pb-0" >
 
         <div class="h-100">
 
@@ -1749,7 +1768,7 @@ console.log(audioPlayer.src);
             <div class="card connection connection-wide border rounded m-1" >
               <div class="card-header text-white bg-primary" id="teacher-header">Teacher</div>
               <div class="card-body bg-light">
-                <div class="d-flex justify-content-center position-relative">
+                <div class="d-flex justify-content-center position-relative" style="margin-top: 0.5px">
                   <div class="teacher-video-controls d-flex justify-content-center align-items-center mb-1 absolute" style="background: transparent">
                     <div id="booth-flags"></div>
                     
@@ -1863,20 +1882,37 @@ console.log(audioPlayer.src);
         
         
           
-        <div id="log-board" class="pb-0 pt-0 cursor-pointer unselectable alert alert-primary w-100 align-self-baseline mb-0 ml-1"
-             style="height: 148px;overflow-y: scroll;"
+        <div id="log-board" class="pb-0 pt-0 pr-1 pl-1 cursor-pointer unselectable alert alert-primary w-100 align-self-baseline mb-0 ml-1" style="height: 148px;overflow-y: scroll;"
         role="alert" title="click to copy log to the clipboard"></div>
       </div>
     
-      <div class="col-sm-4">
-        <div class="card" style="padding: 4px; opacity: 0.90">
+      <div class="col-sm-4 pl-1 pr-2">
+        <div class="card" style="padding: 0px; opacity: 0.90">
           <div class="card-header">Chat</div>
-          <div class="card-body" style="padding: 4px; overflow-y: scroll; max-height: calc(100vh - 266px); height: calc(100vh - 266px); background:transparent" id="chat-board"></div>
-          <div class="card-footer" style="padding: 4px">
+          <div class="card-body p-1" style="overflow-y: scroll; max-height: calc(100vh - 250px); height: calc(100vh - 250px); background:transparent" id="chat-board"></div>
+          
+          <div class="card-footer border-top-0 p-0">
+          
             <div class="form-inline" >
-              <input type="username"  class="form-control" id="chat-text" style="width: calc(100% - 2.8em)" placeholder="Type text here...">
-              <button  id="send-chat-text" class="btn btn-primary ml-auto"><i class="far fa-paper-plane"></i></button>
-            </div>  
+
+              <div class="input-group w-100">
+              
+                <div class="input-group-prepend">
+                    <div class="input-group-text cursor-pointer unselectable p-1" id="emoji-picker"><i class="far fa-smile"></i></div>
+                </div>
+                <input type="text"  class="form-control" id="chat-text" placeholder="Type text here...">
+                <div class="input-group-append">
+                  <button  id="send-chat-text" class="bg-primary text-light input-group-text pl-2 pr-2"><i class="far fa-paper-plane"></i></button>
+                </div>
+                
+                
+              </div>
+            
+
+              
+              
+            </div>
+
           </div>
         </div>
       </div>
