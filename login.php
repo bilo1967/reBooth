@@ -137,8 +137,6 @@ if (@$_SESSION['login']) {
   <!-- Google reCaptcha -->
   <script src='https://www.google.com/recaptcha/api.js'></script>
 
-
-  <script src="js/bootstrap4-input-clearer.min.js"></script>
   <script src="js/utils.js"></script>
 
   <link rel="stylesheet" href="css/rebooth.css?v0.1">
