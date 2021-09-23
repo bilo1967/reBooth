@@ -2,14 +2,23 @@
 
 
 :root {
+    /* these are going to define aspect ratio for all video sizes */
+    --default-video-width: 240px;
+    --default-video-height: 180px;
+    
+    --tiny-video-width: 120px;
     --small-video-width: 160px;
-    --small-video-height: 120px;
-    --normal-video-width: 240px;
-    --normal-video-height: 180px;
+    --medium-video-width: 200px;
+    --large-video-width: 300px;
+
     --video-toolbar-height: 36px;
     --video-toolbar-button-height: 24px;
     --video-wide-toolbar-button-height: 40px;
+
+    --video-height: var(--default-video-height);
+    --video-width: var(--default-video-width);
 }
+
 
 ::placeholder {
   color: rgb(240, 240, 240);
@@ -22,14 +31,18 @@
 }
 
 .video-normal {
-    width: var(--normal-video-width);
-    height: var(--normal-video-height);
-    background: rgb(255,255,255);
-    padding: 2x;
+    width: var(--video-width);
+    height: var(--video-height);
+    _background: rgb(250,250,255);
+    object-fit: contain;
+    padding-left: 1px;
+    padding-right: 1px;
+    padding-top: 0px;
+    padding-bottom: 0px;
 }
 
 .connection {
-    width: var(--normal-video-width);
+    width: var(--video-width);
 }
 
 
@@ -39,7 +52,7 @@
 }
 
 .connection .card-header, .connection .card-footer {
-    padding: 4px ;
+    padding: 2px ;
     height: auto;
 }
 
@@ -53,13 +66,16 @@
 }
 
 .booth-mini-log {
-    width: calc(var(--normal-video-width) - 12px);
+    w_idth: calc(var(--video-width) - 12px);
+    width: auto;
+    padding-left: 1px;
+    padding-right: 1px;
     background: rgba(0,0,0,0.5);
     color: white;
 }
 
 #teacher-label {
-    width: calc(var(--normal-video-width));
+    width: calc( var(--video-width) );
     background: rgba(0,0,0,0.5);
     color: white;
 }
@@ -74,8 +90,8 @@
 }
 
 .booth-name {
-    display:inline-block;
-    width: calc(var(--normal-video-width) - 60px);
+    display: inline-block;
+    width: calc( 100% - 38px );
 }
 
 
@@ -323,6 +339,7 @@ input.vertical-slider[type=range]::-moz-range-thumb {
 
 .chat-who {
     display: block;
+    word-break: break-all;
     font-size: 0.75em;
 }
 
