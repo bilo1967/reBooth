@@ -1,7 +1,7 @@
 <?php
     // Load configuration
     include_once(dirname(__FILE__) . "/config/config.inc.php");
-    
+
     header('Content-Type: text/html; charset=utf-8');
 
     if (isset($CONFIG['php_session_timeout']) && $CONFIG['php_session_timeout'] > 0) {
@@ -23,7 +23,7 @@
 <head>
   <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
   <meta name="robots" content="index, follow">
-  
+
   <title>ReBooth</title>
 
   <!-- favicon for all devices -->
@@ -34,24 +34,23 @@
   <link rel="mask-icon" href="/images/icons/safari-pinned-tab.svg" color="#5bbad5">
   <link rel="shortcut icon" href="/images/icons/favicon.ico">
 
-  
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-
+  <!-- JQuery -->  
   <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
-  
+
+  <!-- Bootstrap 4 -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
-  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>  
-  
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+
   <!-- Bootstrap 4 alerts, confirm, prompt boxex -->
   <script src="js/bootbox.min.js"></script>
-  
-<script src="js/utils.js"></script>
-<link rel="stylesheet" href="css/rebooth.css?0.01">
 
-<script src="config/config.js?0.01"></script>
-<script src="js/rebooth.js?0.01"></script>
-  
-  
+  <!-- ReBooth -->
+  <link rel="stylesheet" href="css/rebooth.css?0.01">
+  <script src="js/utils.js"></script>
+  <script src="config/config.js?0.01"></script>
+  <script src="js/rebooth.js?0.01"></script>
+
 <style>
 body {
     background-image: url("images/logo.png");
@@ -63,23 +62,18 @@ body {
 }
 </style>
 
-  
 <script>
 
 const isLogged = <?= isset($_SESSION['login']) && $_SESSION['login'] ? "true" : "false" ?>;
 
-console.log(isLogged);
-
-
 $(document).ready(function() {
-    
+
     // Set title
     $('#application-name').html(AppName + " v" + AppVersion);
     
     $('#version').html('[ ' + AppName + ' v' + AppVersion + ' &dash; clone it from <a target="_blank" href="' + AppGitHub + '">GitHub</a> ]');
     $('#author').html("By " + AppAuthorShort + " and " + AppContributorsShort + " &dash; " + AppCompanyShort);
-    
-    
+
     if (isLogged) {
         $('#logout').removeClass('disabled');
     } else {
@@ -88,8 +82,6 @@ $(document).ready(function() {
 });
 
 </script>
-
-
 
 </head>
 <body>
