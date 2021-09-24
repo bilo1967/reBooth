@@ -59,8 +59,8 @@
   <script src="js/js.cookie.js"></script>
 
   <!-- Rebooth -->
-  <script src="js/utils.js?0.00"></script>
   <link rel="stylesheet" href="css/rebooth.css?0.02">
+  <script src="js/utils.js?0.00"></script>
   <script src="config/config.js?0.01"></script>
   <script src="js/rebooth.js?0.01"></script>
   <script src="js/common.js"></script>
