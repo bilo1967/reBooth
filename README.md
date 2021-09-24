@@ -8,9 +8,9 @@ This code is still full of commented parts and debugging instructions and needs 
 
 ReBooth (which stands for _Remote Booth_) is a [WebRTC](https://webrtc.org/) based platform for conference interpreter training, conceived and developed for the Department of Interpretation and Translation (DIT) at the University of Bologna by Gabriele Carioli and Nicoletta Spinolo.
 
-The system connects an instructor and a small group of students (up to 7/8 depending on the hardware quality and the instructor's bandwidth, expecially upstream).
+The system connects an instructor and a small group of students (up to 10/12 depending on the hardware quality and the instructor's bandwidth, expecially upstream).
 
-ReBooth WebRTC connections are peer-to-peer and not peer-to-server (no SFU/MCU). There's a single audio/video WebRTC connection between the instructor and each student (the connection topology is star shaped). The instructor can individually talk with each student ("talk to booth") or communicate one-way with the whole class (class call mode). In _class call_ mode the instructor can talk to a booth, whose audio is broadcasted to the other booths (each booth can talk at a time).  Students can communicate each other only via chat, with text messages transparently routed by the instructor using the WebRTC data channel. Media and binary files, on the other hand, are exchanged using a web server.
+ReBooth WebRTC connections are peer-to-peer and not peer-to-server (no SFU/MCU). There's a single audio/video WebRTC connection between the instructor and each student (the connection topology is star shaped). The instructor can individually talk with each student ("talk to booth") or communicate one-way with the whole class (class call mode). In _class call_ mode the instructor can talk to a booth, whose audio is broadcasted to the other booths (each booth can talk at a time). Students can communicate each other only via chat, with text messages transparently routed by the instructor using the WebRTC data channel. Media and binary files, on the other hand, are exchanged using a web server.
 
 To reduce the risk of compromising student activity, ReBooth:
 1) Sends the entire media file to the student's browser before the instructor starts the session or exam. This allows the student to listen to the media file in its original quality, without being affected by any connection problems or drops.
@@ -157,11 +157,12 @@ ReBooth uses several third-party frameworks, components, libraries and resources
 * [PeerJS](https://peerjs.com/">https://peerjs.com/)
 * [JQuery](https://jquery.com/">https://jquery.com/)
 * [Bootstrap 4](https://getbootstrap.com/)
+* [Toastr] (https://codeseven.github.io/toastr/)
 * [BootBox JS](http://bootboxjs.com/)
 * [JsZip](https://stuk.github.io/jszip/)
-* [Moment JS](https://momentjs.com/)
 * [Animate.css](https://github.com/animate-css/animate.css)
 * [FontAwesome](https://fontawesome.com/)
 * [Code snippets from WebRTC Samples](https://webrtc.github.io/samples/)
 * [PHP Mailer](https://github.com/PHPMailer/PHPMailer)
-
+* [JSCookie] (https://github.com/js-cookie/js-cookie)
+* [Moment JS](https://momentjs.com/)
