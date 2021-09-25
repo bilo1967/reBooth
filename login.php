@@ -112,6 +112,7 @@ if (@$_SESSION['login']) {
   <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
 
   <meta name="description" content="ReBooth (REmote BOOTH) is a WebRTC based platform for conference interpreter training">
+  <meta name="keywords" content="interpreter,interpreters,interpreting,interpretation,simultaneous,consecutive,training,webrtc,conference,conference interpretation,interpretation booth">  
 
   <title>ReBooth:login</title>
 
