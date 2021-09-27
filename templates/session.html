@@ -810,12 +810,6 @@ $(document).ready(function() {
                     
                     $('#booth-'+pin+" .booth-connection").html('').css('background-color', 'transparent');
                     
-/*                    
-                    $('#booth-'+pin+' .talk-to-booth')
-                        .removeClass('active')
-                        .removeClass('disabled')
-                        .addClass('active');
-*/                    
                     let d = new Date();
                     if (DebugLevel >= 2) console.log(pin + " " + who + " disconnected");
                     appendLog(who + " disconnected (" + d.toTimeStamp() + ")");
@@ -825,7 +819,6 @@ $(document).ready(function() {
 
                     if (data.chat) {
                     
-console.log(">>>>>> pin:" + pin + ", who:" + who);
                         animateCSS('#send-chat-text', 'heartBeat');
                         
                         if ($('#shared-chat').prop("checked") == true) {
@@ -844,11 +837,6 @@ console.log(">>>>>> pin:" + pin + ", who:" + who);
 //                      }
                         who = who + ""; // cast to string
                         
-/*      
-                        let t = "<span style='color: purple'><b>" + who + "</b>&gt; " + data.chat.text + "</span>";
-                        $("#chat-board").append(t);
-                        $("#chat-board").scrollToEnd();
-*/
                         writeToChat(data.chat.text, who);
                         
 
@@ -857,7 +845,6 @@ console.log(">>>>>> pin:" + pin + ", who:" + who);
                         switch (data.flags.value) {
                             case "raise hand":
                                 clearAllFlags(pin);
-                                //$('#booth-video-controls-'+pin).css('background', 'rgba(255, 0, 0, 0.5)');
                                 loadAndPlay("sounds/boing.wav");
                                 $('#booth-video-controls-'+pin+' .booth-flags').html(
                                     '<span class="fa-stack fa-4x text-warning">' +
@@ -916,7 +903,7 @@ console.log(">>>>>> pin:" + pin + ", who:" + who);
                         });
                     } else if (data.snapshot) {
                     
-console.log("SNAPSHOT IN ARRIVO?");
+//console.log("SNAPSHOT IN ARRIVO?");
                         downloadDataURL(data.snapshot.parameters.url, data.snapshot.parameters.filename);
                     
                     } else if (data.system) {
@@ -1982,11 +1969,6 @@ console.log("SNAPSHOT IN ARRIVO?");
         $('.listen-to-booth-indicator').removeClass('spinner-grow');
         me.muteAllBooths();
         
-/*        
-        $('.talk-to-booth').each(function() {
-            if ($(this).hasClass('active')) $(this).button('toggle');
-        });
-*/    
         $(this).button('toggle');
 
         if ($(this).hasClass('active')) {
@@ -3047,24 +3029,6 @@ function logToServer(timeStamp, logLevel, script, line, column, log) {
       </div>
       
 
-<!--    
-      
-      <hr/>
-
-      <div class="form-group">
-        <div class="custom-control custom-checkbox">
-          <input type="checkbox" class="custom-control-input" id="debugging"
-          data-toggle='collapse' data-target='#debugging-options' >
-          <label class="custom-control-label" for="debugging">Collect logs for developers</label>
-          <div class="w-100 collapse" id="debugging-options">
-            <a href="#" id="download-log">download logs</a>
-          </div>
-        </div>
-      </div>
-
--->    
-      
-      
     </form>
     
       </div>
