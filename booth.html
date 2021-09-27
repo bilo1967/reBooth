@@ -350,18 +350,10 @@ $(document).ready(function() {
     if (classCode != null) $("#class-code").val(classCode);
 
 
-    // clear button in inputs
-    //$(function() {
-    //    $('.clearer').clearer();
-    //});
-
-
     // Load local camera and microphone selectors
     setDeviceSelector($('#select-video-source').get(0), 'videoinput');  // select box for video source devices
     setDeviceSelector($('#select-audio-source').get(0), 'audioinput');  // select box for audio source devices
     setDeviceSelector($('#select-audio-output').get(0), 'audiooutput'); // select box for audio output devices
-
-
 
 
     // Handle chronometer and timeout for batch activities
@@ -1492,8 +1484,6 @@ $(document).ready(function() {
 
         const audioPlayer = $('#audio-player').get(0);
         
-console.log(audioPlayer.src);
-
         if (DebugLevel >= 2) console.log("Media file is loaded and ready to play");
 
         // Tell the teacher that media file is loaded and ready to play
@@ -2009,23 +1999,6 @@ console.log(audioPlayer.src);
         </div>      
       </div>      
       
-      
-<!--    
-      
-      <hr/>
-
-      <div class="form-group">
-        <div class="custom-control custom-checkbox">
-          <input type="checkbox" class="custom-control-input" id="debugging"
-          data-toggle='collapse' data-target='#debugging-options' >
-          <label class="custom-control-label" for="debugging">Collect logs for developers</label>
-          <div class="w-100 collapse" id="debugging-options">
-            <a href="#" id="download-log">download logs</a>
-          </div>
-        </div>
-      </div>
-
--->    
       
       
     </form>
