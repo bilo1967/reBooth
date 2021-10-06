@@ -27,6 +27,13 @@ const AllowedMediaFileExtensions = ['wav','mp3','mpeg3','ogg','m4a','mp4','m4v']
 // Prefix to use to name booths added at class time (will prefix a number)
 const classTimeBoothNamePrefix = "student@booth.n";
 
+// Customize sound effects
+const SoundBatchOver       = "sounds/dblbeep.wav";
+const SoundSnapshot        = "sounds/shutter.wav";
+const SoundStartRecording  = "sounds/bell.wav";
+const SoundAudioReady      = "sounds/click.wav";
+const SoundHandRaised      = "sounds/boing.wav";
+
 
 // Teacher PC has to handle several upstream and downstream connections
 // Tipically downstream band is larger than upstream so it make sense to
