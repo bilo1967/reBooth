@@ -84,6 +84,8 @@ try {
             error_log("Booth with pin $pin and token $token is authorized to access files");
         }
     
+    } else {
+        error_log("Teacher $user is authenticated and authorized to access files.");
     }
     
     
@@ -105,16 +107,20 @@ try {
     if (!file_exists($filePath)) throw new Exception("404"); // not found
 
 
+    error_log("File $fileName exists and can be downloaded. Sending headers and data.");
+
+
     // Send generic headers - it should work also without headers
     header("Content-Type: application/octet-stream");
-//  header("Content-Disposition: attachment; filename=$fileName");
+    header("Content-Disposition: attachment; filename=\"$fileName\"");
     header("Content-length: " . (string) (filesize($filePath)));
     header("Expires: " . gmdate("D, d M Y H:i:s", mktime(date("H") + 2, date("i"), date("s"), date("m"), date("d"), date("Y"))) . " GMT");
     header("Last-Modified: " . gmdate("D, d M Y H:i:s") . " GMT");
     header("Cache-Control: no-cache, must-revalidate");
     header("Pragma: no-cache");
     
-    readfile_chunked($filePath);
+    //readfile_chunked($filePath);
+    readfile($filePath);
 
 } catch(Exception $e) {
     // Errors are returned as standard HTTP response codes
