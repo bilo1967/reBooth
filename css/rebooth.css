@@ -301,6 +301,15 @@ input.vertical-slider[type=range]::-moz-range-thumb {
     transform: translate(-50%, -50%); 
 }
 
+
+.hyphenate  {
+     -webkit-hyphens: auto;
+     -moz-hyphens: auto;
+     -ms-hyphens: auto;
+     hyphens: auto;
+ }
+
+
 .chat-me {
     background: #99FFFF;
     float: right;
