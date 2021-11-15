@@ -171,7 +171,7 @@ $(document).ready(function() {
            e = e.replaceAll(/[<>]/g, '').trim();
            if (e == "") return;
            
-           if (!validateEmail(e) || invitations.find((i) => { return i.email == e })) {
+           if (!Student.validateEmail(e) || invitations.find((i) => { return i.email == e })) {
                bad.push(e);
            } else {
                good.push(e);

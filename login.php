@@ -60,19 +60,19 @@ if (isset($_POST['login']) && !empty($_POST['login'])) {
             // session and temp subdirectories
 
             $home = $CONFIG['data_path'] . "/$user/" . $CONFIG['session_folder'];
-            @mkdir($home, 0771, true);
+            @mkdir($home, 0777, true);
             if (!is_dir($home)) throw new Exception("Can't create working directory '$home' for $user");
             if (!is_writable($home)) throw new Exception("$user working directory is not writable"); 
 
             // We also create the log directory
             $log = $CONFIG['data_path'] . "/$user/" . $CONFIG['log_folder'];
-            @mkdir($log, 0771, true);
+            @mkdir($log, 0777, true);
             if (!is_dir($log)) throw new Exception("Can't create log directory for $user");
             if (!is_writable($log)) throw new Exception("$user log directory is not writable");
 
             // We also create temp directory and delete all files
             $temp = $CONFIG['data_path'] . "/$user/" . $CONFIG['temp_folder'];
-            @mkdir($temp, 0771, true);
+            @mkdir($temp, 0777, true);
             if (!is_dir($temp)) throw new Exception("Can't create temp directory for $user");
             if (!is_writable($temp)) throw new Exception("$user temp directory is not writable");
 

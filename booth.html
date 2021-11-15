@@ -37,27 +37,30 @@
   <script src="//cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
   <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">  
 
+  <!-- CRC32 -->
+  <script src="js/crc-32.js"></script>
+  
   <!-- JSCookies -->
   <!-- Usage: Cookies.set('pippo', "Bla bla bla", {expires: 14}); let x = Cookies.get('pippo'); -->
   <script src="js/js.cookie.js"></script>
-
+  
+  <!-- AnchorMe -->
+  <script src="js/anchorme.min.js"></script>
+  
   <!-- PeerJS -->
   <script src="js/peerjs.min.js?0.5"></script>
 
-  <!-- CRC32 -->
-  <script src="js/crc-32.js"></script>
-
-  <!-- Local scripts and styles -->
-  <link rel="stylesheet" href="css/rebooth.css?v0.7">
-  <script src="js/io-devices.js"></script>
+  <!-- ReBooth -->
+  <link rel="stylesheet" href="css/rebooth.css?v0.9">
+  <script src="config/config.js?0.11"></script>
+  <script src="js/common.js?0.02"></script>
   <script src="js/utils.js?0.02"></script>
   <script src="js/myrecorder.js"></script>
-  <script src="js/mychrono.js"></script>  
-  <script src="js/log.js?0.0"></script>  
+  <script src="js/mychrono.js"></script>
+  <script src="js/log.js?0.0"></script>
   <script src="js/emojiPicker.js"></script>
-  <script src="config/config.js?0.11"></script>
-  <script src="js/rebooth.js?v0.7"></script>
-  <script src="js/common.js?0.00"></script>
+  <script src="js/io-devices.js?0.01"></script>
+  <script src="js/rebooth.js?v0.9"></script>
 
 <style>
 
@@ -147,10 +150,10 @@ var userName        = urlParams.get('s')   ? urlParams.get('s')   : null;
 var sessionToken    = null;
 
 // Force check on query string parameters
-myPin = validatePin(myPin) ? myPin : null;
-classCode = validatePin(classCode) ? classCode : null;
-userName = validateEmail(userName) ? userName.toLowerCase() : null;
-teacherUserName = validateEmail(teacherUserName) ? teacherUserName.toLowerCase() : null;
+myPin = Student.validatePin(myPin) ? myPin : null;
+classCode = Student.validatePin(classCode) ? classCode : null;
+userName = Student.validateEmail(userName) ? userName.toLowerCase() : null;
+teacherUserName = Student.validateEmail(teacherUserName) ? teacherUserName.toLowerCase() : null;
 
 //if (userName) userName = userName.trim().replace(/[\/\\|&:;$%"<>()+, ]/g, '');
 
@@ -177,6 +180,10 @@ var audioDestinationStreamNode = null;
 
 
 var boothPlayerGainMax = PlayerGainMax;
+
+
+var mediaFetcher = null;
+var mediaFetcherProgress = 0;
 
 
 function logToServer(timeStamp, logLevel, script, line, column, log) {
@@ -218,13 +225,126 @@ function logToServer(timeStamp, logLevel, script, line, column, log) {
 
 
 
-
-
-
-
-
-
 $(document).ready(function() {
+
+
+    // When no webcam is available we get a fake video stream from a canvas element...
+    initFakeWebcam({
+        message: 'Unusable or unavailable webcam',
+        onStart: (msg) => {
+            $('#booth-video').removeClass('mirrored');
+        },
+        onStop: () => {
+            $('#booth-video').addClass('mirrored');
+        },
+    });
+
+
+    const audioPlayer = $('#audio-player').get(0);
+    
+    // Set up media fetching from server using the MediaFetcher class (see utils.js)
+    // Only one download is allowed at a time and each subsequent dowload cancels any 
+    // download in progress (default behaviour of MediaFetcher).
+    
+    mediaFetcher = new MediaFetcher("/actions/read", {
+    
+        // We display the progress percentage and
+        // send a feedback to the server, also...
+        onProgress: function( params )  {
+            let speed = "";
+            let p = Math.round(params.progress * 100);
+            
+            // Progress status messages are sent only every 5%
+            // This value should be set in a constant...
+            if (Math.round(p/5)*5 > mediaFetcherProgress) {
+                mediaFetcherProgress = Math.round(p/5)*5;
+                me.send({
+                    player: {
+                        action: "loading",
+                        parameters: {
+                            file: fileName,
+                            crc: fileCRC,
+                            progress: mediaFetcherProgress,
+                        }
+                    }
+                });
+            }
+            
+            if (params.downloadSpeed > 5000) {
+                speed = (params.downloadSpeed/1000).toFixed(1) + " Mb/s";
+            } else {
+                speed = Math.round(params.downloadSpeed) + " kb/s";
+            }
+            $('#audio-player-text').html("Loading: " + p + "% (" + speed + ")" );
+        },
+        
+        // When the download is ready we load it into the player.
+        // A CRC check is carried out on downloaded data (the downloaded file 
+        // must have the same CRC as the one requested by the teacher).
+        onLoad: async function(res, size) {
+
+            fileSize = size;
+            fileCRC = crc32(res);
+
+            if (DebugLevel >= 2) console.log('File "' + fileName + '" (' + fileSize + ' bytes) has been buffered and it\'s CRC is 0x' + fileCRC.toHex());
+
+            if (crc != fileCRC) {
+                throw Error("crc-error");
+            }
+        
+            // Genero un blob a partire dal buffer e creo un pseudolink per poterlp caricare nel player come source
+            audioPlayer.src = URL.createObjectURL(new Blob([ res ]));
+            
+            $('#audio-player').one('canplaythrough', canPlayThrough);
+            $('#audio-player-text').html(baseName(fileName));
+            
+            appendLog("Media file '<em>" + baseName(fileName) + "</em>' loaded");
+
+        },
+        onAbort: () => {
+            mediaFetcherProgress = 0;
+            console.warn("Player error or new loading requested: current fetch aborted");
+//          toastr.warning("Transfer aborted", "User action", {positionClass: "toast-middle", timeOut: 500} );
+        },
+        onError: function(msg, err) {
+        
+            mediaFetcherProgress = 0;
+
+            // GESTIONE DELL'ERRORE DI CARICAMENTO
+
+            if (msg == 'crc-error') {
+                console.warn("Player error: media file CRC mismatch");
+                
+                me.send({
+                    player: {
+                        action: "crc-error",
+                        parameters: {
+                            file: fileName,
+                            crc: fileCRC,
+                            mesg: "Teacher's and booth's media file differs",
+                        }
+                    }
+                });
+
+            } else {
+
+                console.warn("Player HTTP error " + err + ": " + msg);
+                
+                me.send({
+                    player: {
+                        action: "http-error",
+                        parameters: {
+                            file: fileName,
+                            crc: fileCRC,
+                            mesg: msg,
+                        }
+                    }
+                });
+                appendLog("Can't load media file '<em>" + fileName + "</em>' (" + msg + ")", "log-item-error");
+            }
+
+        },
+    });
 
 
     $('#emoji-picker').emojiPicker('chat-text', {
@@ -268,7 +388,6 @@ $(document).ready(function() {
             // Here we create objects needing an user gesture to be created
 
             // create an audio context and hook up the video/audio element as the source
-            
             audioCtx = new AudioContext();
             playerSource = audioCtx.createMediaElementSource($('#audio-player').get(0));
             //teacherSource = audioCtx.createMediaElementSource($('#teacher-video').get(0));
@@ -368,7 +487,7 @@ $(document).ready(function() {
         if (batchChrono) batchChrono.clear();
         if (batchTimeout) {
             clearTimeout(batchTimeout);
-            loadAndPlay("sounds/dblbeep.wav");
+            loadAndPlay(SoundBatchOver);
         }
         
         $('#batch-display').removeClass('hide').addClass('hide');
@@ -467,10 +586,17 @@ $(document).ready(function() {
                         break;
                 }
             } else if (data.snapshot) {
+
+                // snapshot might be too large to be transferred
+                // using a single message in the data-channel
+
+/*            
                 if (DebugLevel >= 2) console.log("Snapshot requested");
                 let snapfile = data.snapshot.parameters.filename;
-                takeSnapshotFromMediaStream($('#booth-video')[0].srcObject, 2).then(r => {
-                    loadAndPlay("sounds/shutter.wav");
+                takeSnapshotFromMediaStream($('#booth-video').get(0).srcObject, 2).then(r => {
+                    
+                    loadAndPlay(SoundSnapshot);
+                    
                     me.send({
                         snapshot: {
                             action: 'ready', 
@@ -480,9 +606,10 @@ $(document).ready(function() {
                             }
                         }
                     });
+
                     //downloadDataURL(r.url, snapfile);
                 });                   
-                
+*/
             } else if (data.player) {
                $(document).trigger('teacher-player-commands', {
                    date: Date.now(),
@@ -614,7 +741,7 @@ $(document).ready(function() {
                                 parameters: data.batch.parameters ? data.batch.parameters : null
                             });
 
-                            loadAndPlay("sounds/dblbeep.wav");
+                            loadAndPlay(SoundBatchOver);
 
                         }, (delay + 2)*1000);
                     });                    
@@ -627,7 +754,6 @@ $(document).ready(function() {
                     appendLog("Starting consecutive translation session");
                     
 
-                    //loadAndPlay("sounds/beep.wav");
                     $('#recorder-chrono').text("--:--");
                     
                     $('#batch-type').html('Consecutive');
@@ -683,7 +809,7 @@ $(document).ready(function() {
                                     parameters: data.batch.parameters ? data.batch.parameters : null
                                 });
                                 
-                                loadAndPlay("sounds/dblbeep.wav");
+                                loadAndPlay(SoundBatchOver);
                             
                             }, (duration + 2) * 1000);
                         
@@ -745,9 +871,16 @@ $(document).ready(function() {
     });
 
 
+    // ondevicechange event (webcam or headset has been plugged in or out)
+    navigator.mediaDevices.ondevicechange = (e) => {
+        appendLog("Device list change detected");
+        animateCSS('#config-button', 'jello');
+        handleDeviceListChange(e); // io-devices.js
+    }
 
     // Reload device list when the config button is clicked
     $('#config-button, #refresh-devices').on('click', function(e) {
+    
         e.preventDefault();
         if ($(this).hasClass('disabled')) return;
         
@@ -796,12 +929,13 @@ $(document).ready(function() {
 
     getDevices()
         .then(() => {
+
             $('#select-video-source').val(Cookies.get('student-video-source') || 'default');
             $('#select-audio-source').val(Cookies.get('student-audio-source') || 'default');
             $('#select-audio-output').val(Cookies.get('student-audio-output') || 'default');
 
             setUserMediaConstraints(handleMediaSuccess, handleMediaErrors);
-            changeAudioDestination($('#teacher-video')[0]);
+            changeAudioDestination($('#teacher-video').get(0));
             //changeAudioDestination($('#audio-player')[0]);
             changeAudioDestination(audioDestinationElement);
         })
@@ -845,13 +979,13 @@ $(document).ready(function() {
         let code = $("#class-code").val().trim();
         let name = $("#student-user-name").val().trim().toLowerCase(); 
         
-        if (!validateEmail(teacher)) teacher = '';
-        if (!validatePin(pin)) pin = '';
+        if (!Student.validateEmail(teacher)) teacher = '';
+        if (!Student.validatePin(pin)) pin = '';
         if (name == '' && pin != '') {
             name = pin + "@booth.nn";
         }
-        if (!validateEmail(name)) name = '';
-        if (code && !validatePin(code)) code = '';
+        if (!Student.validateEmail(name)) name = '';
+        if (code && !Student.validatePin(code)) code = '';
 
         if (teacher == '' || pin == '' || name == '') {
             if (teacher == '') animateCSS('#teacher-user-name', 'flash');
@@ -1067,7 +1201,7 @@ $(document).ready(function() {
                 break; 
             }
             
-            loadAndPlay("sounds/bell.wav");
+            loadAndPlay(SoundStartRecording);
             
             if (DebugLevel >= 2) console.log("Start recording");
             
@@ -1281,6 +1415,9 @@ $(document).ready(function() {
         }
     });
 
+
+
+
     // Abort controller to interrupt fetch commands
     var controller = null;
     
@@ -1292,7 +1429,6 @@ $(document).ready(function() {
         var file = '';
         
         // Reference to audio player
-        var audioPlayer = $('#audio-player').get(0);
 
         
         switch (data.action) {
@@ -1301,123 +1437,39 @@ $(document).ready(function() {
             crc = params.crc;
             teacher = params.teacher;
             
+            // Skip downloading if the currently loaded file is the same as 
+            // the one the teacher wants us to fetch
+            if (file == fileName && crc == fileCRC) {
+                
+                if (DebugLevel >= 2) console.log("File '" + params.file + "' already loaded");
+                
+                audioPlayer.currentTime = 0;
+                
+                canPlayThrough(); // Proceed like if we have downloaded the file again
+
+                return;
+            }
             
             $('#audio-player').off('canplaythrough'); // remove handler, if any
             audioPlayer.pause();
 
-            //audioPlayer.currentTime = 0;            
-            
-            //audioPlayer.src = ""; // clear 
-            
             $('#audio-player-text').html('Loading&hellip;');
             $('#audio-player-display').html("00:00:00 / --:--:--");
-            
-            
+
             fileName = file;// Global
             
             if (DebugLevel >= 2) console.log("Teacher wants to load this file: " + params.file);
-            
-            var formData = new FormData();
-            formData.append("user", teacher);
-            formData.append("file", file);
-            formData.append('pin', myPin);
-            formData.append("token", sessionToken);
-            formData.append('classCode', classCode);
-            
-            appendLog("Loading media file '<em>" + baseName(file) + "</em>'&hellip;");
-            
-            // Abort a previous load command, if any. See "signal"
-            if (controller) controller.abort();
-            
-            controller = new AbortController();
-            const { signal } = controller;
-            
-            const request = new Request('/actions/read', {
-                method: 'POST',
-                body: formData,
+
+            mediaFetcherProgress = 0;
+            mediaFetcher.fetch({
+                user: teacher,
+                file: file,
+                pin: myPin,
+                token: sessionToken,
+                classCode: classCode,
             });
-     
-            fetch(request, {signal}).then((res) => { 
-                if (!res.ok) {
-                  throw Error(res.status);
-                }
-                
-                //return res.blob(); 
-                //return res.text(); 
-                return res.arrayBuffer(); 
-            }).then(buf => {
 
-                fileCRC = crc32(buf);
-                if (DebugLevel >= 2) console.log('CRC32 of file "' + fileName + " is 0x" + fileCRC.toHex());
-                
-                if (crc != fileCRC) {
-                    throw Error("crc-error");
-                }
-                
-                var blob = new Blob([ buf ]);
-
-                // Creo un pseudolink per poter caricare il blob come source 
-                let objectURL = URL.createObjectURL(blob);
-
-                // Il blob è caricato
-                if (DebugLevel >= 2) console.log("Blob ready");
-
-
-                // Carico il blob nel player
-                audioPlayer.src = objectURL;
-                
-                $('#audio-player').one('canplaythrough', canPlayThrough);
-                
-                // Il blob è caricato
-                if (DebugLevel >= 2) console.log("Loading blob");
-
-                
-                $('#audio-player-text').html(baseName(file));
-                
-                
-                
-                appendLog("Media file '<em>" + baseName(file) + "</em>' loaded");
-                            
-            }).catch( (e) => {
-
-                // GESTIONE DELL'ERRORE DI CARICAMENTO
-                
-                let code = e.name != "Error" ? e.name : e.message;
-                
-                if (code == 'crc-error') {
-                    console.warn("Player error: media file CRC mismatch");
-                    
-                    me.send({
-                        player: {
-                            action: "crc-error",
-                            parameters: {
-                                file: fileName,
-                                crc: fileCRC,
-                                mesg: "Teacher's and booth's media file differs",
-                            }
-                        }
-                    });     
-                } else if (code == 'AbortError') {
-                    console.warn("Player error: current fetch aborted");
-                } else {
-                    let message = (code in httpErrorCodes) ? httpErrorCodes[code] : "unknown error";
-                    
-                    console.warn("Player HTTP error " + code + ": " + message);
-                    
-                    me.send({
-                        player: {
-                            action: "http-error",
-                            parameters: {
-                                file: fileName,
-                                crc: fileCRC,
-                                mesg: message,
-                            }
-                        }
-                    });
-                    appendLog("Can't load media file '<em>" + fileName + "</em>' (" + message + ")", "log-item-error");
-                }
-            });   
-
+            appendLog("Loading media file '<em>" + baseName(file) + "</em>'&hellip;");
             
             break;
         case 'play':
@@ -1434,8 +1486,7 @@ $(document).ready(function() {
             if (DebugLevel >= 2) console.log("Teacher wants to stop the playing file: " + fileName /*params.file*/);
             break;
         }
-    });    
-    
+    });
     
     $('#audio-player-volume').on('input', function() {
     
@@ -1480,10 +1531,8 @@ $(document).ready(function() {
     
     
     // Quando il player può eseguire il suo contenuto
-    var canPlayThrough = function() {
-
-        const audioPlayer = $('#audio-player').get(0);
-        
+    var canPlayThrough = function(a) {
+    
         if (DebugLevel >= 2) console.log("Media file is loaded and ready to play");
 
         // Tell the teacher that media file is loaded and ready to play
@@ -1503,7 +1552,7 @@ $(document).ready(function() {
         $('#audio-player-display').html("00:00:00 / " + t.toHHMMSS());
         $('#audio-player-progress').css('width', "0%");
         
-        // Show the player
+        // Show the player if there are video tracks
         if (audioPlayer.captureStream) {
             n = audioPlayer.captureStream().getVideoTracks().length;
         } else if (audioPlayer.mozCaptureStream) {
@@ -1517,9 +1566,10 @@ $(document).ready(function() {
             $('#player-container').addClass('hide');
         }
 
-        
+        $('#audio-player-text').html(baseName(fileName));        
+
         animateCSS('#audio-player-controls', 'rubberBand');
-        loadAndPlay("sounds/click.wav");
+        loadAndPlay(SoundAudioReady);
 
     }
 
@@ -1581,7 +1631,7 @@ $(document).ready(function() {
                     mesg: "media file is ended",
                 }
             }
-        });     
+        });
         
     });       
     
@@ -1960,7 +2010,7 @@ $(document).ready(function() {
       </div>
       <div class="d-flex">
         <span class="">Microphone volume meter:</span>
-        <canvas class="border rounded mr-1 align-self-center ml-auto" style="width:calc(100% - 13rem); height:24px" id="vumeter"></canvas>
+        <canvas class="border rounded mr-1 align-self-center ml-auto p-0" style="width:calc(100% - 13rem); height:24px" height="24" width="258" id="vumeter"></canvas>
       </div>
       
       <hr/>
