@@ -125,7 +125,7 @@ const ScreenShareConstraints = {
 const PeerJSConfig = {
     host:   'your.peerjs.server', // your peerjs server address
     port:   9443,                 // your peerjs server port
-    debug:  2,
+//  debug:  2,
     path:   '/',
     secure: true,                 // use SSL
     
