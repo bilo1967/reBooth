@@ -42,25 +42,28 @@
 
   <!-- CRC32 -->
   <script src="js/crc-32.js"></script>
-
+  
   <!-- JSCookies-->
   <script src="js/js.cookie.js"></script>
+  
+  <!-- AnchorMe -->
+  <script src="js/anchorme.min.js"></script>
 
   <!-- PeerJS -->
   <script src="js/peerjs.min.js?0.05"></script>
-
+  
   <!-- ReBooth -->
-  <link rel="stylesheet" href="css/rebooth.css?0.03">
+  <link rel="stylesheet" href="css/rebooth.css?0.08">
+  <script src="config/config.js?0.11"></script>
+  <script src="js/common.js?0.02"></script>
+  <script src="js/utils.js?0.02"></script>
   <script src="js/myrecorder.js"></script>
   <script src="js/mychrono.js"></script>
   <script src="js/log.js"></script>
   <script src="js/emojiPicker.js"></script>
   <script src="js/io-devices.js"></script>
-  <script src="js/utils.js?0.02"></script>
-  <script src="config/config.js?0.11"></script>
-  <script src="js/rebooth.js?0.06"></script>
+  <script src="js/rebooth.js?0.07"></script>
   <script src="js/rebooth-file-manager.js?0.06"></script>
-  <script src="js/common.js?0.01"></script>
 
 <style>
 
@@ -129,8 +132,10 @@
 
 
 body {
+
     background: url(images/bg10.jpg) no-repeat center center fixed;
     background-size: cover;
+
 }
 
 
@@ -347,8 +352,9 @@ $(document).ready(function() {
         $('[data-tooltip="tooltip"]').tooltip('hide');
     }); 
     $("input[data-tooltip='tooltip']").mouseout(function(){
-      $(this).tooltip('hide');
+      $('[data-tooltip="tooltip"]').tooltip('hide');
     });    
+    
     
     // Set media file allowed extensions
     $('#file-upload').attr('accept', AllowedMediaFileExtensions.map(x => '.' + x).join(','));
@@ -368,6 +374,17 @@ $(document).ready(function() {
                "for the " + AppCompany + "</span>",
         message: "Remember that students won't be able to connect to their booths until you press the 'start the class' button.",
         callback: () => {
+        
+            // When no webcam is available we get a fake video stream from a canvas element...
+            initFakeWebcam({
+                message: 'Unusable or unavailable webcam',
+                onStart: (msg) => {
+                    $('#teacher-video').removeClass('mirrored');
+                },
+                onStop: () => {
+                    $('#teacher-video').addClass('mirrored');
+                },
+            });
         
             // We do all these initializations here because some of them (noticeably
             // the creation of an audio context) need an user interface element to be
@@ -845,7 +862,7 @@ $(document).ready(function() {
                         switch (data.flags.value) {
                             case "raise hand":
                                 clearAllFlags(pin);
-                                loadAndPlay("sounds/boing.wav");
+                                loadAndPlay(SoundHandRaised);
                                 $('#booth-video-controls-'+pin+' .booth-flags').html(
                                     '<span class="fa-stack fa-4x text-warning">' +
                                     '<i class="fas fa-circle fa-stack-2x" style="opacity: 0.8"></i>' +
@@ -1321,15 +1338,18 @@ $(document).ready(function() {
     
     });
 
-
-    
+    // ondevicechange event (webcam or headset has been plugged in or out)
+    navigator.mediaDevices.ondevicechange = (e) => {
+        appendLog("Device list change detected");
+        animateCSS('#config-button', 'jello');
+        handleDeviceListChange(e); // io-devices.js
+    }
 
     // Reload device list when the config button is clicked    
     $('#config-button, #refresh-devices').on('click', function() {
         if (DebugLevel >= 3) console.log("enumerating devices");
         getDevices()
             .then(() => { 
-                
                 $('#config-panel').modal('show'); 
             })
             .catch(handleLocalMediaStreamError);
@@ -1508,6 +1528,12 @@ $(document).ready(function() {
             break;
         case 'http-error':
             console.error("Booth " + pin + " (" + who + "): HTTP error '" + mesg + "' loading file '" + file + "'");
+            break;
+        case 'loading':
+            // We won't display 100% because messages from booths are asynchronous and
+            // it may happen that 'ready' comes before 'loading.progress:100'
+            if (params.progress >= 100) return;
+            $('#booth-' + pin + " .booth-mini-log").html('Loading: ' + params.progress + '%');
             break;
         }
     });
@@ -2200,8 +2226,12 @@ $(".booth-signal").html("");
     // Take a snapsnot
     $('#booths').on('click', '.take-snapshot', function(e) {
         let pin = $(this).closest('.connection').data('pin');
-        let videoElem = $('#booth-video-' + pin)[0];
+        let videoElem = $('#booth-video-' + pin).get(0);
+
         
+/*      
+        // ask hi-res snapshot to the booth
+        // (might cause data channel to close unexpectedly)
         if (me.isBoothConnected(pin)) {
             let who = me.booths[pin].who;
             me.send(pin, {
@@ -2214,12 +2244,14 @@ $(".booth-signal").html("");
            });
         
         }
+        
         return;
+*/
         if (me.isBoothConnected(pin)) {
             let who = me.booths[pin].who;
         
             takeSnapshotFromMediaStream(videoElem.srcObject, 3).then(r => {
-                loadAndPlay("sounds/shutter.wav");
+                loadAndPlay(SoundSnapshot);
                 downloadDataURL(r.url, who.replace('@', '.') + '.png');
             });    
         }
@@ -2570,8 +2602,8 @@ function logToServer(timeStamp, logLevel, script, line, column, log) {
                     <div class="d-flex">
                       <div class="mr-1">
                         <label for="open-file-manager-button" class="label-tiny text-dark">Load</label>
-                        <button  id="open-file-manager-button" class="player-control btn btn-success btn-main-toolbar" data-toggle="modal" data-target="#file-manager" data-html="true" data-tooltip="tooltip" title="Open the file manager and send a media file to connected booths.<br>It won't be played until you press play or start a sim/cons">
-                          <i class="fas fa-folder-open"></i>
+                        <button  id="open-file-manager-button" class="player-control btn btn-success btn-main-toolbar" data-toggle="modal" data-target="#file-manager" >
+                          <i data-html="true" data-tooltip="tooltip" title="Open the file manager and send a media file to connected booths.<br>It won't be played until you press play or start a sim/cons" class="fas fa-folder-open"></i>
                         </button>
                       </div>
                       
@@ -2934,7 +2966,8 @@ function logToServer(timeStamp, logLevel, script, line, column, log) {
         <div class="m-2 p-2 bg-light" id="file-manager-log"></div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-outline-success float-left"  id="file-list-refresh-button" data-html="true" data-tooltip="tooltip" title="Refresh the file list (may be needed if you've uploaded a file in another class)"><i class="fas fa-sync"></i> &nbsp; Refresh list</button>
+        <div class="mr-auto" id="loading-stats"></div>
+        <button class="btn btn-outline-success ml-auto"  id="file-list-refresh-button" data-html="true" data-tooltip="tooltip" title="Refresh the file list (may be needed if you've uploaded a file in another class)"><i class="fas fa-sync"></i> &nbsp; Refresh list</button>
       
         <button type="button" class="btn btn-secondary" data-dismiss="modal" id="file-manager-close-button-2">Close</button>
       </div>
