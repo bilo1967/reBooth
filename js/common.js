@@ -20,7 +20,7 @@ function appendLog(message, cls="") {
 
 function loadClock() {
     updateClock();
-    setInterval(updateClock, 1000);
+    setInterval(() => requestAnimationFrame(updateClock), 1000);
 }
 
 function updateClock(){
@@ -109,8 +109,6 @@ function handleMediaErrors(err, message) {
 }
 
 
-
-
 //
 // Writes messages to the log board
 // CSS is used to emphasize and better distinguish messages from various users
@@ -124,6 +122,18 @@ var chatLastTimer = null;
 function writeToChat(t, who = "") {
 
     who = who + ""; // Type casting
+    
+    t = anchorme({
+        input: t, 
+        options: { 
+            attributes: {
+                target: "_blank", 
+                class: "chat-url",
+            },
+            truncate: 24,
+            middleTruncation: false,
+        }
+    });
 
     const chatIdPrefix = 'chat-id-';
 
@@ -148,7 +158,7 @@ function writeToChat(t, who = "") {
     lastWhoWroteToChat = who;
     lastChatMessageId++;
     
-    var html = '<div class="' + c + '" id="' + chatIdPrefix + lastChatMessageId + '">' +
+    var html = '<div class="hyphenate ' + c + '" id="' + chatIdPrefix + lastChatMessageId + '">' +
                whoText +
                t + '</div>'
                ;
@@ -237,9 +247,14 @@ function setVuMeter(stream, elem, options = {type: 'dbmeter', bars: 20, barSepWi
 
     // Common canvas and analyser values
     
+    
+    
     // Get canvas width and height
-    const w = elem.width;
-    const h = elem.height;
+    const w = elem.width * window.devicePixelRatio;
+    const h = elem.height * window.devicePixelRatio;
+    
+    elem.width = w;
+    elem.height = h;
     
     // Compute vertical bar width
     const barWidth = Math.ceil( (w - (options.bars-1) * options.barSepWidth) / options.bars );
@@ -375,19 +390,15 @@ function setVuMeter(stream, elem, options = {type: 'dbmeter', bars: 20, barSepWi
     };
 }
 
-
-
-
 // Sets the MediaStream as the video element src and draws a vumeter for it's audio
 function gotLocalMediaStream(stream) {
 
-    if (DebugLevel >= 3) console.log("gotLocalMediaStream: begin");
 
     me.setMediaStream(stream);
     setVuMeter(stream, $("#vumeter").get(0));
     window.stream = stream;
     
-    if (DebugLevel >= 3)  console.log("gotLocalMediaStream: end");
+    if (DebugLevel >= 3)  console.log("gotLocalMediaStream");
     
     // Pass argument to next element in promise chain
     //return navigator.mediaDevices.enumerateDevices();  

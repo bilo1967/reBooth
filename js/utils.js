@@ -1,3 +1,15 @@
+/*
+** utils.js
+**
+** A collection of constants, functions and classes that 
+** the author of https://github.com/bilo1967/rebooth uses
+** for his projects.
+**
+** Some are pieces of code found around the web and revised,
+** some are original. A few of them require JQuery to work.
+*/
+
+
 // Just to note this somewhere: &#xA; is the newline sequence for TITLE attribute
 
 // HTTP response codes
@@ -48,6 +60,7 @@ const httpErrorCodes = {
     
     '418': "I'm a teapot (RFC 2324)",
     '420': "Enhance Your Calm (Twitter)",
+    '421': "Mismatched request",
     '422': "Unprocessable Entity (WebDAV)",
     '423': "Locked (WebDAV)",
     '424': "Failed Dependency (WebDAV)",
@@ -104,9 +117,9 @@ Number.prototype.toMMSS = function() {
 // Convert number to an Hex of a specified length (default=8)
 Number.prototype.toHex = function(len) {
     if (typeof(len) === 'undefined') len = 8;
-    var num = this < 0 ? (0xFFFFFFFF + this + 1) : this
-    var hex = num.toString(16).toUpperCase()
-    var pad = hex.length < len ? len - hex.length : 0
+    var num = this < 0 ? (0xFFFFFFFF + this + 1) : this;
+    var hex = num.toString(16).toUpperCase();
+    var pad = hex.length < len ? len - hex.length : 0;
     return "0".repeat(pad) + hex;
 }
 
@@ -335,7 +348,7 @@ function loadAndPlay(tunePath, loop = false) {
         node.loop = loop;
         node.start();
     }
-    console.log("Play", tunePath);
+    // console.log("Play", tunePath);
     req.send();
 };
 
@@ -352,7 +365,7 @@ function loadAndPlay(tunePath, loop = false) {
  *   });
  */
 
-function takeSnapshotFromMediaStream(stream, resize = 1) {
+async function takeSnapshotFromMediaStream(stream, resize = 1) {
     if (!stream instanceof MediaStream) return false;
     if (isNaN(resize) || resize <= 0 || resize > 10) return false;
     
@@ -551,4 +564,226 @@ function closePictureInPicture() {
     if (!document.pictureInPictureEnabled || !document.pictureInPicture) return;
 
     document.exitPictureInPicture();
+}
+
+
+
+
+/*
+** MediaFetcher Class
+**
+** MediaFetcher is a wrapper class for XMLHttpRequest
+** It has been written because the Fetch API at the moment does not
+** allow to have stats about the download in progress (and show, for
+** example, a progress bar). It is useful for downloading a large 
+** media file
+**
+** CONSTRUCTOR
+**
+**   var downloader = new MediaFetcher(script, options};
+**
+**   script
+**     the script to be called on the server. If there is no such a script
+**     on the server, a 404 error is returned via onError (see options)
+**
+**   options 
+**     is... well... optional. See next section for the complete list of these options
+** 
+** OPTIONS
+** 
+** method: string (default: POST)
+**   specifies which HTTP method has to be used to call the script.
+**   Can be POST or GET. The default is POST.
+**
+** cancel: boolean (default: true)
+**   true to abort a download when a new one is issued, false otherwise.
+**   When cancel is set to false, the fetch method will return false if
+**   a download is in progress.
+**
+** timeOut: number (default: null)
+**   time out in milliseconds. Default is null (= no time out).
+**   In case of timeout the current download is aborted and the onTimeOut 
+**   callback is called.
+**
+** onProgress(obj): callback
+**   returns an obj with transfer stats for every fetched chunk of data.
+**   obj has these fields:
+**   - progress: progress percentage (0.0 to 1.0),
+**   - total: total transfer size in bytes,
+**   - loaded: downloaded data size in bytes (progress=loaded/total),
+**   - elapsed: elapsed time in ms,
+**   - downloadSpeed: download speed in kb/sec (not rounded),
+**   If the server script does not return the "Content-lenght" header
+**   then progress and total won't be available.
+**
+** onLoad(buf, siz): callback
+**    called when the transfer is complete. Returns file contents in an 
+**    arrayBuffer buf, along with the file size siz.
+**    You can convert the arrayBuffer to Blob (and possibly use it as 
+**    source for an <audio> or <video> element) like this:
+**
+**      player.src = URL.createObjectURL(new Blob([ buf ]));
+**
+** onError(msg, err): callback 
+**    returns an error message msg and an error code err (a standard HTTP status code)
+**
+** onAbort(): callback
+**    is called when a download is aborted
+**
+** onTimeOut(): callback
+**    gets called in case of time-out (the timeOut option must be set)
+**
+** METHODS
+**
+** fetch(flds)
+**    Requests the download, passing to the script the fields specified in flds.
+**    Returns true if the request has sent, false if it has been canceled
+**    because another one is in progress and the "cancel" property is set to
+**    true. If it is false, the current download is aborted and a the new one
+**    is launched.
+**
+*/
+class MediaFetcher {
+
+    loader        = null;
+    startTime     = null;
+    loading       = false;
+    
+    // properties
+    script        = null;          // mandatory 
+    method        = 'POST';        // option: POST or GET
+    cancel        = true;          // option
+    timeOut       = null;          // option
+    responseType  = 'arraybuffer'; // option: arraybuffer or blob
+
+    // callbacks
+    onProgress    = (obj) => {};
+    onLoad        = (buf, len, crc) => {};
+    onError       = (msg, cod) => {};
+    onAbort       = () => {};
+    onTimeOut     = () => {};
+    
+    constructor(script, options = {}) {
+    
+        this.script = script;
+        
+        if (['POST', 'GET'].includes(options.method)) this.method = options.method;
+        if (['arraybuffer', 'blob'].includes(options.responseType)) this.responseType = options.responseType;
+        if (typeof options.cancel === 'boolean') this.cancel = options.cancel;
+        if (typeof options.timeOut === 'number' && options.timeOut > 0) this.timeOut = options.timeOut;
+        if (typeof options.onProgress === 'function') this.onProgress = options.onProgress;
+        if (typeof options.onLoad     === 'function') this.onLoad     = options.onLoad    ;
+        if (typeof options.onAbort    === 'function') this.onAbort    = options.onAbort   ;
+        if (typeof options.onTimeOut  === 'function') this.onTimeOut  = options.onTimeOut ;
+        if (typeof options.onError    === 'function') this.onError    = options.onError   ;
+        
+    }
+    
+    abort() {
+        this.loading = false;
+        if (typeof(this.loader) === 'object') this.loader.abort();    
+    };
+    
+    initLoader() {
+    
+        this.loader = new XMLHttpRequest();
+        
+        this.loader.open(this.method, this.script);
+        this.loader.responseType = this.responseType;
+        if (this.timeOut) this.loader.timeout = this.timeOut;
+        
+        this.loader.onload = (e) => { // better to use onreadystatechange instead?
+
+            var res   = this.loader.response, // Note: not this.loader.responseText
+                ready = this.loader.readyState === 4,
+                code  =  this.loader.status;
+            
+            if (!ready) return;
+            
+            // if we are here, either we have the file or an error but
+            // in any case the request has been processed
+            this.loading = false;
+            
+            // We expect an arraybuffer
+            if (code != '200' || typeof res !== 'object') {
+                // Guess we would never get this case...
+                if (typeof res !== 'object') {
+                    code = "406"; // means that the server has generated a non acceptable response
+                }
+                let message = httpErrorCodes[code] !== undefined ? httpErrorCodes[code] : "Unknown error";
+                console.warn("Error " + code + ": " + message);
+                this.onError(message, code);
+            } else {
+
+                try {
+                    if (this.responseType == 'arraybuffer') {
+                        // player.src = URL.createObjectURL(new Blob([ res ]));    
+                        this.onLoad(res, res.byteLength);
+                    } else {
+                        this.onLoad(res, res.size);
+                    }
+                } catch(err) {
+                    this.onError(err, null);
+                }
+                
+            }
+
+            return;
+        };
+        
+        this.loader.onprogress = ( e ) => {
+            let elapsed = performance.now() - this.startTime;
+            let stats = null;
+
+            if (e.lengthComputable) {
+                if (!stats) stats = {};
+                stats.progress = (e.loaded / e.total);
+                stats.total = e.total;
+            }
+            if (e.loaded) {
+                if (!stats) stats = {};
+                stats.loaded = e.loaded;
+                stats.elapsed = elapsed;
+                stats.downloadSpeed = e.loaded/elapsed; // bytes/ms = kb/s
+            }
+            this.onProgress(stats);
+        };
+        this.loader.onabort = (e) => {
+            this.loading = false;
+            this.onAbort();
+            console.log("Transfer aborted");
+        }
+        this.loader.ontimeout = (e) => {
+            this.loading = false;
+            this.onTimeOut();
+            console.log("Transfer timed out");
+        }
+    }
+
+    fetch(vars) {
+
+        var formData = new FormData();
+
+        for (const key in vars) {
+            formData.append(key, vars[key]);
+        }
+
+        // New transfer: abort previous if cancel=true
+        if (this.loading) {
+            if (this.cancel) {
+                this.abort();
+            } else {
+                // 429 is actually "Too many requests"
+                this.onError("Fetcher is busy (another download is in progress)", "429");
+                return false;
+            }
+        }
+
+        this.initLoader();
+        this.loading = true;
+        this.startTime = performance.now(); 
+        this.loader.send(formData);
+
+        return true;
+    }
 }

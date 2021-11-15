@@ -1,13 +1,9 @@
 /*
-*  Copyright (c) 2015 The WebRTC project authors. All Rights Reserved.
 *
-*  Use of this source code is governed by a BSD-style license
-*  that can be found in the LICENSE file in the root of the source
-*  tree.
 */
 
 
-var videoSelect       = null; // select box for video source devices
+var videoInputSelect  = null; // select box for video source devices
 var audioInputSelect  = null; // select box for audio source devices
 var audioOutputSelect = null; // select box for audio output devices
 
@@ -17,7 +13,7 @@ function setDeviceSelector(selector, type) {
     
     switch(type) {
     case 'videoinput':
-        videoSelect = selector;
+        videoInputSelect = selector;
         break;
     case 'audioinput':
         audioInputSelect = selector;
@@ -33,17 +29,65 @@ function setDeviceSelector(selector, type) {
     return true;
 }
 
+/*
+function getCurrentDeviceList() {
+    const getList = (selector, kind) => {
+        var a = [];
+        
+        if (typeof selector.options != 'object') return a;
+        
+        for(var i = 0; i < selector.options.length; i++) {
+            a.push({text: selector.options[i].text, value: selector.options[i].value, kind: kind});
+        }
+        return a;
+    }
+    
+    const list = Array.prototype.concat(
+        getList(videoInputSelect, 'videoinput'),
+        getList(audioInputSelect, 'audioinput'),        
+        getList(audioOutputSelect, 'audiooutput')
+    );
+    
+    return list;
+}
+*/
 
-async function getDevices(deviceInfos = null) {
+async function getDevices(deviceInfos = null, update = true, change = false ) {
     
     if (deviceInfos === null) {
         deviceInfos = await navigator.mediaDevices.enumerateDevices();
     }
-    if (videoSelect)       updateDeviceList(deviceInfos, videoSelect, 'videoinput');
-    if (audioInputSelect)  updateDeviceList(deviceInfos, audioInputSelect, 'audioinput');
-    if (audioOutputSelect) updateDeviceList(deviceInfos, audioOutputSelect, 'audiooutput');
+    if (update) {
+        if (videoInputSelect)  updateDeviceList(deviceInfos, videoInputSelect,  'videoinput',  change);
+        if (audioInputSelect)  updateDeviceList(deviceInfos, audioInputSelect,  'audioinput',  change);
+        if (audioOutputSelect) updateDeviceList(deviceInfos, audioOutputSelect, 'audiooutput', change);
+    }
     
     return deviceInfos;
+}
+
+
+// Handler for ondevicechange event (webcam or headset has been plugged in or out)
+// We update the device list accordingly
+// The event is triggered for each single device change in a group. This means that 
+// for a composite device like an headset that consists of headphones and
+// a microphone this handler will be called twice.
+function handleDeviceListChange(e) {
+
+    getDevices(null, false).then(deviceList => {
+        
+        // Check if previously selected device has been removed (id no longer in device list)
+        // In that case, the default one must be selected (the 1st listed of that kind)
+        const changeVI = videoInputSelect  ? !deviceList.find(e => e.deviceId == videoInputSelect.value)  : false,
+              changeAI = audioInputSelect  ? !deviceList.find(e => e.deviceId == audioInputSelect.value)  : false,
+              changeAO = audioOutputSelect ? !deviceList.find(e => e.deviceId == audioOutputSelect.value) : false;
+
+        updateDeviceList(deviceList, videoInputSelect,  'videoinput',  changeVI);
+        updateDeviceList(deviceList, audioInputSelect,  'audioinput',  changeAI);
+        updateDeviceList(deviceList, audioOutputSelect, 'audiooutput', changeAO);
+
+        return;
+    })
 }
 
 
@@ -57,19 +101,20 @@ async function getDevices(deviceInfos = null) {
 //                  all of them, if we have more select boxes it may be a good idea to get
 //                  the device list just once and pass it as an argument.
 // deviceSelector:  select element
-// type:            audioinput|videoinput|audiooutput
+// kind:            audioinput|videoinput|audiooutput
+// change:          force change event on updated device selector
 // onError:         callback function to handle possible enumerateDevices errors...
 // 
 // Returns the device list on success, null on error
 //
-async function updateDeviceList(deviceList = null, deviceSelector, type = 'videoinput', onError = null) {
+async function updateDeviceList(deviceList = null, deviceSelector, kind = 'videoinput', change = false, onError = null) {
 
     if (typeof onError !== 'function') onError = (error) => { console.error('Cannot get device list:', error.message, error.name); };
 
     try {
         if (deviceList === null) deviceList = await navigator.mediaDevices.enumerateDevices();
 
-        // Get current selected camera id from device selector, if any
+        // Get current selected device id from device selector, if any
         const selected = deviceSelector.value;
         
         // Delete all options from device selector
@@ -80,23 +125,33 @@ async function updateDeviceList(deviceList = null, deviceSelector, type = 'video
         // For each device, if it's of the desired type, add a select option to the deviceSelector
         var deviceCount = 0;
         deviceList.forEach((e, i) => {
-            if (e.kind === type) {
+            
+// TEMPORANEAMENTE TOGLIAMO LA VIRTUAL WEBCAM DI OBS STUDIO
+// if (e.deviceId == "79b0583bb453423ae321c3063bd16086638148541ea794a88a4035872cfb6d71") return;
+            
+            if (e.kind === kind) {
                 deviceCount++;
                 const option = document.createElement('option');
                 
                 option.value = e.deviceId;
-                option.text = e.label || `${type} dev. n. ${deviceCount}`;
+                option.text = e.label || `${kind} dev. n. ${deviceCount}`;
                 
                 deviceSelector.appendChild(option)
             } else {
                 // Other kind of device
-                //console.log(e.kind);
+                // console.log(e.kind);
             }
         });
         
-        // Set previously selected option, if found
+        // Set previously selected option if found, or first option in list (if any)
         if (Array.prototype.slice.call(deviceSelector.childNodes).some(n => n.value === selected)) {
             deviceSelector.value = selected;
+            if (change) deviceSelector.dispatchEvent(new Event('change'));
+        } else if (deviceSelector.firstChild) {
+            deviceSelector.value = deviceSelector.firstChild.value;
+            if (change) deviceSelector.dispatchEvent(new Event('change'));
+        } else {
+            throw "No more " + kind + " devices available";
         }
         
         return deviceList;

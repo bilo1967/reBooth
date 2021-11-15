@@ -1,11 +1,109 @@
 var fileName = "";
 var fileCRC = "";
 
+var mediaFetcher = null;
+
+
 $(document).ready(function() {
     
     $('#audio-player-play').removeClass('disabled').addClass('disabled');
     $('#audio-player-stop').removeClass('disabled').addClass('disabled');
     $('#audio-player-pause').removeClass('disabled').addClass('disabled');
+
+    // Creo un riferimento di comodo al player
+    const audioPlayer = $('#audio-player').get(0);
+
+
+    // Set up media fetching from server using the MediaFetcher class (see utils.js)
+    // Only one download is allowed at a time and each subsequent dowload cancels any 
+    // download in progress (default behaviour of MediaFetcher).
+    mediaFetcher = new MediaFetcher("/actions/read", {
+    
+        // Updates the download progress info in the file manager dialog
+        onProgress: function( params )  {
+            let speed = "";
+            let p = Math.round(params.progress * 100);
+            
+            if (params.downloadSpeed > 5000) {
+                speed = (params.downloadSpeed/1000).toFixed(1) + " Mb/s";
+            } else {
+                speed = Math.round(params.downloadSpeed) + " kb/s";
+            }
+            $('#loading-stats').html("Loading: " + p + "% (" + speed + ")" );
+        },
+        
+        // When the media file has been fetched, its CRC is calculated and
+        // it is sent to the player.
+        // The "canPlayThrough" event manager is activated to verify that 
+        // the file is can be played.
+        onLoad: async function(res, size) {
+        
+            fileSize = size;
+            fileCRC = crc32(res);
+
+            if (DebugLevel >= 2) console.log('File "' + fileName + '" (' + fileSize + ' bytes) has been buffered and it\'s CRC is 0x' + fileCRC.toHex());
+
+            $('.file-item-select').html('<i class="far fa-hand-point-right"></i>');
+            $('#loading-stats').html('Loading: 100%');
+
+            // Genero un blob a partire dal buffer e creo un pseudolink per poterlp caricare nel player come source
+            audioPlayer.src = URL.createObjectURL(new Blob([ res ]));
+            
+            $('#audio-player').one('canplaythrough', canPlayThrough);
+            
+            $('#audio-player-text').html((baseName(fileName)).trunc(28));
+            
+            $('#audio-player-stop').trigger('click');
+
+            $(document).trigger('player-feedback', {
+                date: Date.now(), 
+                action: "ready",
+                parameters: { file: fileName, crc: fileCRC }
+            });
+
+            setTimeout(() => {
+                $("#file-manager").modal("hide");    
+            }, 100);
+    
+        },
+        onAbort: () => {
+            toastr.warning("You've calceled current transfer", "Transfer aborted", {positionClass: "toast-middle", timeOut: 500} );
+            $('#loading-stats').html('');
+        },
+        onError: function(msg, err) {
+
+            // File read error
+            
+            let m = "";
+            
+            switch (err) {
+                case "400":
+                case "412":
+                    m = "Can't read that file: bad request";
+                    break;
+                case "401":
+                    m = "Your booth is not unauthorized to read the requested file";
+                    break;
+                case "403":
+                    m = "Access to that file is forbidden. Maybe your session has expired?";
+                    break;
+                case "404":
+                    m = "The requested file has not been found";
+                    break;
+                default:
+                    m = msg;
+                    break;
+            }
+            
+            console.warn("Error " + err + ": " + m);
+
+            toastr.warning(m, "File read error", {positionClass: "toast-middle", timeOut: 5000} );
+
+            $('.file-item-select').html('<i class="far fa-hand-point-right"></i>');            
+            $('#loading-stats').html('');            
+        },
+    });
+
     
   
 //  listFiles();
@@ -45,6 +143,8 @@ $(document).ready(function() {
                 $("#file-manager-log").html(errMsg);
             }
         });
+        
+        $('#loading-stats').html('');
     
     }
     
@@ -146,13 +246,11 @@ $(document).ready(function() {
             }
         });
     });
-    
+
     $('#file-manager').on('click', '.file-item-select', function() {
         
 
-        // Creo un riferimento di comodo al player
-        const audioPlayer = $('#audio-player').get(0);
-
+        $('.file-item-select').html('<i class="far fa-hand-point-right"></i>');        
 
         var id = $(this).closest('.file-item').attr('id');
 
@@ -161,7 +259,7 @@ $(document).ready(function() {
         
         if (DebugLevel >= 2) console.log("File selected, id:" +id + ", filename: " + fileName + ", userName: " + userName);
         
-        loadAndPlay("sounds/click.wav");
+        loadAndPlay(SoundAudioReady);
         $(this).html("<div class='spinner-border spinner-border-sm text-light'></div>");
 
         //audioPlayer.src = noSrc; // clear player -> this fires a "can't play file" error
@@ -169,101 +267,11 @@ $(document).ready(function() {
         // Quando il player può eseguire il suo contenuto
         $('#audio-player').off('canplaythrough');
         
-
-        // JQuery does not allow reading binary data 
-        // via  ajax call so we use the fetch API
-
-        var formData = new FormData();
-        formData.append("user", userName);
-        formData.append("file", fileName);
-        
-        const request = new Request('/actions/read', {
-            method: 'POST',
-            body: formData,
+        // Load selected media file from server
+        mediaFetcher.fetch({
+            user: userName,
+            file: fileName
         });
-
-        fetch(request).then((res) => { 
-            if (!res.ok) {
-                throw Error(res.status);
-            }
-
-            //return res.blob(); 
-            //return res.text(); 
-            return res.arrayBuffer(); 
-        }).then(buf => {
-            
-            fileCRC = crc32(buf);
-            if (DebugLevel >= 2) console.log('CRC32 of file "' + fileName + '" is 0x' + fileCRC.toHex());
-
-            var blob = new Blob([ buf ]);
-            
-            //blob.arrayBuffer().then(b => {
-            //    fileCRC = crc32(b);
-            //    console.log('CRC32 of file "' + fileName + " is 0x" + fileCRC.toHex());
-            //});
-          
-            // Il blob è caricato
-            if (DebugLevel >= 2) console.log("Blob loaded");
-            
-            $('.file-item-select').html('<i class="far fa-hand-point-right"></i>');
-            
-            
-            // Creo un pseudolink per poter caricare il blob come source 
-            let objectURL = URL.createObjectURL(blob);
-            
-            
-            // Carico il blob nel player
-            audioPlayer.src = objectURL;
-            
-            $('#audio-player').one('canplaythrough', canPlayThrough);
-            
-            
-            
-            $('#audio-player-text').html((baseName(fileName)).trunc(28));
-            
-            $('#audio-player-stop').trigger('click');
-
-            $("#file-manager").modal("hide");   
-
-            $(document).trigger('player-feedback', {
-                date: Date.now(), 
-                action: "ready",
-                parameters: { file: fileName, crc: fileCRC }
-            });                
-                    
-        }).catch( (e) => {
-            
-            // File read error
-            
-            let code = e.name != "Error" ? e.name : e.message;
-            
-            let message = (code in httpErrorCodes) ? httpErrorCodes[code] : "unknown error";
-            
-            console.warn("Error " + code + ": " + message);
-            console.warn(e);
-            
-            switch (code) {
-                case "400":
-                case "412":
-                    message = "Can't read that file: bad request";
-                    break;
-                case "401":
-                    message = "Your booth is not unauthorized to read the requested file";
-                    break;
-                case "403":
-                    message = "Access to that file is forbidden. Maybe your session has expired?";
-                    break;
-                case "404":
-                    message = "The requested file has not been found";
-                    break;
-                default:
-                    break;
-            }
-            toastr.warning(message, "File read error", {positionClass: "toast-middle", timeOut: 5000} );            
-            
-            $('.file-item-select').html('<i class="far fa-hand-point-right"></i>');
-            
-        });            
 
     });
     
@@ -276,6 +284,7 @@ $(document).ready(function() {
         //$('#audio-player').get(0).volume = PlayerGainMax * $(this).val();
         playerGain.gain.setValueAtTime(PlayerGainMax * $(this).val(), audioCtx.currentTime);
     });
+
 
     $('#audio-player-play').on('click',  function() {
         if ($(this).hasClass('disabled')) return;
@@ -341,7 +350,7 @@ $(document).ready(function() {
 
 
     var canPlayThrough = function() {
-        var audioPlayer = $('#audio-player').get(0);
+        const audioPlayer = $('#audio-player').get(0);
 
         if (DebugLevel >= 2) console.log("Player: audio file loaded and ready to play");
         

@@ -1,5 +1,48 @@
+function pasteHtmlAtCaret(html) {
+    var sel, range;
+    if (window.getSelection) {
+        // Modern browsers
+        sel = window.getSelection();
+        
+        if (sel.getRangeAt && sel.rangeCount) {
+            range = sel.getRangeAt(0);
+            range.deleteContents();
+
+            // Range.createContextualFragment() would be useful here but is
+            // non-standard and not supported in all browsers (IE9, for one)
+            var el = document.createElement("div");
+            el.innerHTML = html;
+            var frag = document.createDocumentFragment(), node, lastNode;
+            while ( (node = el.firstChild) ) {
+                lastNode = frag.appendChild(node);
+            }
+            range.insertNode(frag);
+            
+            // Preserve the selection
+            if (lastNode) {
+                range = range.cloneRange();
+                range.setStartAfter(lastNode);
+                range.collapse(true);
+                sel.removeAllRanges();
+                sel.addRange(range);
+            }
+        }
+    } else if (document.selection && document.selection.type != "Control") {
+        // IE < 9
+        document.selection.createRange().pasteHTML(html);
+    }
+}
+
 (function ($) {
-	$.fn.emojiPicker = function (elem, params) {
+	$.fn.emojiPicker = function (arg, params) {
+        
+        
+        var elemId = null,
+            bindElem = null,
+            $bindElem = null,
+            onSelect = () => {},
+            settings = {};
+        
 		var defaults = {
 			emojis: [
                 '&#x1F642;', '&#x1f600;', '&#x1f601;', '&#x1f604;', '&#x1f606;',
@@ -49,7 +92,16 @@
             columns: 10,
             position: 'below-left', // below-right, over-left, over-right
 		};
-		var settings = {};
+		
+        if (typeof arg === 'function') {
+            onSelect = arg;
+        } else if (typeof arg  === 'string') {
+            elemId = arg;
+        } else {
+            throw "First argument must be a string (tag id) or a callback function";
+        }
+        
+        
 		if (!params) {
 			settings = defaults;
 		} else {
@@ -58,14 +110,14 @@
 			}
 		}
         
-        var elemId = elem;
-        var $bindElem = $('#' + elemId);
-        
-        if ($bindElem.length == 0) return;
-        
-        if ($bindElem.length > 1) throw "You can bind an emojiPicker just to a single input field";
-        
-        var bindElem = $bindElem.get(0);
+        if (elemId) {
+            $bindElem = $('#' + elemId);
+            
+            if ($bindElem.length == 0) return;
+            if ($bindElem.length > 1) throw "You can bind an emojiPicker just to a single input field";
+            
+            bindElem = $bindElem.get(0);
+        }
         
 
 		this.each(function (n, button) {
@@ -134,7 +186,7 @@ console.log('b: ' + b);
 
                 $pickupList.css(np).show();
                 
-				$bindElem.focus();
+				if ($bindElem) $bindElem.focus();
 
                 setTimeout(function () {
                     $(document).one('click', () => {
@@ -153,21 +205,35 @@ console.log('b: ' + b);
 			function clickEmoji(e) {
                 
                 e.stopPropagation();
-                if (bindElem.selectionStart || bindElem.selectionStart == '0') {
-                    var startPos = bindElem.selectionStart;
-                    var endPos = bindElem.selectionEnd;
-                    bindElem.value = bindElem.value.substring(0, startPos)
-                        + e.currentTarget.innerHTML
-                        + bindElem.value.substring(endPos, bindElem.value.length);
-                } else {
-                    bindElem.value += e.currentTarget.innerHTML;
-                }
                 
-                // closeEmojiPicker();
-                $bindElem.focus();
-                bindElem.selectionStart = startPos + 2;
-                bindElem.selectionEnd = endPos + 2;
+                onSelect(e.currentTarget.innerHTML);
+                
+                if (!bindElem) return;
 
+
+                if ($bindElem.is("input") || $bindElem.is("textarea")) {
+                    if (bindElem.selectionStart || bindElem.selectionStart == '0') {
+                        var startPos = bindElem.selectionStart;
+                        var endPos = bindElem.selectionEnd;
+                        bindElem.value = bindElem.value.substring(0, startPos)
+                            + e.currentTarget.innerHTML
+                            + bindElem.value.substring(endPos, bindElem.value.length);
+                    } else {
+                        bindElem.value += e.currentTarget.innerHTML;
+                    }
+                    // closeEmojiPicker();
+                    $bindElem.focus();
+                    bindElem.selectionStart = startPos + 2;
+                    bindElem.selectionEnd = endPos + 2;
+                } else {
+                    // let id = window.getSelection().baseNode.parentNode.id || window.getSelection().baseNode.id;
+
+                    pasteHtmlAtCaret(e.currentTarget.innerHTML);
+                    // execCommand is deprecated...
+                    //document.execCommand('insertText', false, e.currentTarget.innerHTML);
+                    
+                    $bindElem.focus();
+                }
 			}
 
 			var $pickupList = $('<div>')

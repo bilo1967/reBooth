@@ -9,7 +9,7 @@
 
 
 const AppName              = 'ReBooth';
-const AppVersion           = '0.8.4';
+const AppVersion           = '0.9.0';
 const AppAuthor            = 'Gabriele Carioli';
 const AppContributors      = 'Nicoletta Spinolo';
 const AppCompany           = 'Department of Interpretation and Translation at the University of Bologna';
@@ -29,6 +29,7 @@ setBandwidthProfile();  // Set defaults
 
 
 class Connection {
+
     userId         = null;
     userName       = null;
     pin            = null;
@@ -211,8 +212,6 @@ class Connection {
         return err;
     }
     
-
-    
     destroy() {
         if (this.peer) this.peer.destroy();
         if (this.peer) this.peer.destroy();
@@ -227,6 +226,15 @@ class Connection {
         
     }
     
+    static validatePin(pin) {
+        return (/^[0-9]+$/.test(pin));
+    }
+    
+    static validateEmail(mail) {
+        return (/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,})+$/.test(mail));
+    }
+
+
 };
 
 
@@ -1153,7 +1161,11 @@ class Student extends Connection {
         if (DebugLevel >= 2) console.log("Calling teacher " + teacherUserName + (classCode ? ":" + classCode : "") + " (id: " + teacherId + ") using pin " + pin);
         if (DebugLevel >= 3) console.log("this.userName=" + this.userName);
 
-        this.dataConnection = this.peer.connect(teacherId, { metadata: {pin: pin, userName: this.userName, dataPeer: this.peer.peer}, reliable: true, serialization: 'json', });
+        this.dataConnection = this.peer.connect(teacherId, { 
+            metadata: {pin: pin, userName: this.userName, dataPeer: this.peer.peer}, 
+            reliable: true, 
+            serialization: 'json', 
+        });
         
         
         //
@@ -1344,13 +1356,162 @@ class Student extends Connection {
     }    
 }
 
-function validatePin(pin) {
-    return (/^[0-9]+$/.test(pin));
+
+
+//
+// This class implements a multimedia stream that can be used as
+// a 'service' video track in a WebRTC connection that requires 
+// a webcam when it is not available. This is achieved by streaming
+// the contents of a canvas element (canvas.captureStream)
+// The canvas contains 3 textual elements: an emoji, a message and
+// a clock.
+//
+// var camera = new FakeWebcam({
+//     width:   320,      // logical width of the canvas
+//     height:  200,      // logical heigth of the canvas  
+//     message: "Hello",  // message to be displayed
+//     emoji:   "",       // emoji placed over the message (default: Face Screaming In Fear)
+//     mirror:  false,    // canvas must be mirrored (default=false)
+//     fps:     2,        // frames per second - it's basically a clock so the default is 1
+//     onStart: () => {}, // callback function fired when the method "start" is issued
+//     onStop:  () => {}, // callback function fired when the method "stop" is issued
+// });
+// navigator.mediaDevices.getUserMedia({audio: true}).then((stream) => {
+//     camera.start("No webcam available");
+//     stream.addTrack(camera.track);
+//     return stream;
+// }).then((stream) => { ... })
+// 
+class FakeWebcam {
+
+    canvas = null;
+    timer = null;
+    canvasCtx = null;
+    timerResolution = 1000;
+    
+    _stream = null;
+    _track = null;
+    
+    message = 'Unavailable webcam';
+    defaultMessage = 'Unavailable webcam';
+    emoji = String.fromCodePoint(0x1F631);
+    w = 288;
+    h = 216;
+    fps = 1;
+    mirror = false;
+    
+    onStart = (m) => {};
+    onStop = (m) => {};
+    
+    constructor(options = {}) {
+        
+        if (options.width !== undefined) this.w = options.width;
+        if (options.height !== undefined) this.h = options.height;
+        if (options.message !== undefined) this.message = options.message;
+        if (options.emoji !== undefined) this.emoji = options.emoji;
+        if (options.mirror !== undefined) this.mirror = options.mirror;
+        if (typeof options.onStart === 'function') this.onStart = options.onStart;
+        if (typeof options.onStop === 'function') this.onStop = options.onStop;
+        if (options.fps !== undefined) {
+            this.fps = parseFloat(options.fps); 
+        }
+
+        this.canvas = document.createElement('canvas');
+        
+        // Fix blurred text problem by scaling the canvas size to the true display pixel ratio
+        let scale =  window.devicePixelRatio; 
+        this.canvas.hidden = true;
+        
+        this.canvas.style.width = this.w + "px";
+        this.canvas.style.height = this.h + "px";
+        this.canvas.width = scale * this.w;
+        this.canvas.height = scale * this.h;
+        
+        this.canvasCtx = this.canvas.getContext('2d');
+
+        if (this.mirror) {
+            this.canvasCtx.translate(this.canvas.width, 0);
+            this.canvasCtx.scale(-1, 1);
+        }
+    }
+    
+    start(msg = null) {
+        document.body.appendChild(this.canvas);
+        if (msg !== null) this.message = msg;
+        
+        // Start animation
+        // This is a low fps animation but anyway we use a requestAnimationFrame
+        this.timer = setInterval(() => requestAnimationFrame(this.draw), this.timerResolution);
+
+        this.onStart(msg);
+        
+        this._stream = this.canvas.captureStream(this.fps);
+        this._track = this._stream.getVideoTracks()[0];
+    }
+
+    stop() {
+        this.message = this.defaultMessage;
+        if (this.timer) clearInterval(this.timer);
+        if (this.canvas && document.body.contains(this.canvas)) document.body.removeChild(this.canvas);
+        this.onStop();
+    }
+    
+    get stream() {
+        return this._stream;
+    }
+
+    get track() {
+        return this._track;
+    }
+
+    draw = () => {
+        
+        const h = this.canvas.height, 
+              w = this.canvas.width,
+              th = h / 6;
+        
+        let now = new Date(),
+            time = String('00' + now.getHours()).slice(-2) + ':' +
+                   String('00' + now.getMinutes()).slice(-2) + ':' +
+                   String('00' + now.getSeconds()).slice(-2);
+
+        this.canvasCtx.clearRect(0, 0, w, h);
+       
+        this.canvasCtx.fillStyle = 'rgba(196,174,173,1)';
+        this.canvasCtx.fillRect(0, 0, w, h);
+        
+        this.canvasCtx.lineWidth = 0;
+        this.canvasCtx.fillStyle = 'white';
+        this.canvasCtx.textBaseline = 'middle';
+        this.canvasCtx.textAlign = 'center';
+
+        // Draw emoji
+        this.canvasCtx.font = th + 'px Helvetica';
+        this.canvasCtx.fillText(time, w / 2, h / 2 + 1.5 * th);
+        
+        // Draw message
+        if (this.message) {
+            let fs = 2*th/3 + 1;
+            do {
+              fs = fs - 0.5;
+              this.canvasCtx.font = fs + 'px Helvetica';  
+            } while (this.canvasCtx.measureText(this.message).width > w - 10);
+            this.canvasCtx.fillText(this.message, w / 2, h / 2 + 0.5 * th);
+        }
+        
+        // Draw current time
+        this.canvasCtx.font = 2 * th + 'px Helvetica';
+        this.canvasCtx.fillText(this.emoji, w / 2, h / 2 - th);
+    }
 }
 
-function validateEmail(mail) {
-    return (/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,})+$/.test(mail));
+var fakeWebcam = null;
+
+function initFakeWebcam(options = {}) {
+    console.log("Init fake webcam");
+    fakeWebcam = new FakeWebcam(options);
 }
+
 
 
 function setUserMediaConstraints(onOk = null, onError = null) {
@@ -1380,17 +1541,62 @@ function setUserMediaConstraints(onOk = null, onError = null) {
         if (constraints.video == true) constraints.video = {};
         constraints.video.deviceId = {exact: videoSource};
     }
-  
 
     //constraints.video.deviceId = videoSource ? {exact: videoSource} : undefined;
     //constraints.audio.deviceId = audioSource ? {exact: audioSource} : undefined;
 
     if (DebugLevel >= 3) console.log("Device constraints: " + JSON.stringify(constraints));
 
+    //var fakeTrack = null;
+
     navigator.mediaDevices.getUserMedia(constraints)
-        .then(gotLocalMediaStream)
-        .then(() => { if (typeof onOk === 'function') onOk(constraints); })
-        .catch((err) => {
+        .then(
+            (s) => {
+                // Promise fulfilled
+                fakeWebcam.stop();
+
+                //if (fakeTrack) fakeTrack.stop();
+                //fakeTrack = null;
+
+                return gotLocalMediaStream(s);
+            },
+            (err) => {
+                // The required constraints were not accepted. If the problem depends on
+                // the webcam, we will try to replace its stream with a bogus one 
+                // (from a canvas element) and continue.
+                
+                // If the error is not related to the webcam (video) we propagate the error
+                if (! err.message.includes('video')) throw err;
+                
+                
+                // We now try to get a stream requiring only microphone
+                let audioOnly = { audio: constraints.audio };
+                
+                
+                navigator.mediaDevices.getUserMedia(audioOnly).then((stream) => {
+
+                    let t = "No webcam available?";
+                    if (videoSource) {
+                        t = $('#select-video-source option:selected').text().match(/^[^()]+/)[0].trim();
+                        
+                        t = t + ' unavailable';
+                    }
+                    
+                    
+                    fakeWebcam.start(t);
+                    stream.addTrack(fakeWebcam.track);
+                    
+                    gotLocalMediaStream(stream);
+                })
+                
+                onError(err.name, err.message);
+                return false;
+            }
+        ).then((s) => { 
+            if (typeof s == 'boolean') return;
+            if (typeof onOk === 'function') onOk(constraints); 
+            return s;
+        }).catch((err) => {
             handleLocalMediaStreamError(err);  
             if (typeof onError === 'function') {
                 onError(err.name, err.message);
@@ -1406,7 +1612,6 @@ function handleLocalMediaStreamError(error) {
 
 // const pc = booth.mediaConnection.peerConnection;
 function reduceOutstreamBandwidth(mediaConnection, vb, vh, ab) {
-    
 
     // let b = 96000;
     // let h = 120;
@@ -1453,6 +1658,7 @@ function reduceOutstreamBandwidth(mediaConnection, vb, vh, ab) {
             if (DebugLevel >= 3) console.log("Unknown track type: " + sender.track.kind, settings);    
             return;
         }
+        
         
         sender.setParameters(parameters).then(() => {
             if (DebugLevel >= 2) console.log("Upstream bandwidth successfully reduced");
