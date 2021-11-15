@@ -1,3 +1,17 @@
+## [v0.9.0]
+Media files are now loaded via XMLHttpRequest instead of Fetch (see new MediaFetcher class in utils.js).  
+Implemented loading completion percentage.  
+Booths now download files only if actually necessary.  
+If a webcam cannot be used (or if none is detected) a replacement video stream showing a clock is sent to the other peer. In this way it is possible to participate to the class even without a webcam (see FakeWebcam class in rebooth.js).
+
+## [v0.8.6]
+Improved device detection (new device and device removal detection).
+
+## [v0.8.5]
+The sound effect file paths have been parametrised.  
+PeerJS library does not allow to send big files via data channel in JSON mode: booths snapshots are now done on teacher side. This feature has been flagged for removal.  
+15 character limit for the name showed in the chat has been removed.
+
 ## [v0.8.4]
 Improvements to the chat system (the most visible is the emoji picker).  
 More tooltips have been added.  
