@@ -156,7 +156,7 @@ body {
 .credits {
     font-size: 0.8rem;
     font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji";    
-    background-color: transparent;
+    background-color: rgba(255, 255, 255, 0.75);
 }
 </style>
 
@@ -245,7 +245,7 @@ $(document).ready(function(){
 
   </div>
 
-  <div style="position: absolute; bottom: 2; left:10; right:10; width: vw" class="d-flex justify-content-between bg-light">
+  <div style="position: absolute; bottom: 2; left:10; right:10; width: vw" class="d-flex justify-content-between">
     <div id="version" class="credits"></div>
     <div class="credits"><span id="author"></span> &#128073; <a href="/credits">credits</a></div>
   </div>
