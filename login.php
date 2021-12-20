@@ -156,6 +156,7 @@ body {
 .credits {
     font-size: 0.8rem;
     font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji";    
+    background-color: transparent;
 }
 </style>
 
@@ -186,7 +187,6 @@ $(document).ready(function(){
 
 </head>
 <body>
-<br/>
 
 <br/>
 <div class="container-fluid">
@@ -199,7 +199,7 @@ $(document).ready(function(){
   <div class="row">
     <div class="col-sm-3"></div>
 
-    <div class="mx-auto col-sm-6 border rounded border-primary p-4 bg-light">
+    <div class="mx-auto col-sm-6 border rounded border-primary pl-4 pr-4 pt-3 pb-0 bg-light">
       <h3 class="" style="text-align: center">Login</h3>
 <?php
   if ($errMsg != '') {
