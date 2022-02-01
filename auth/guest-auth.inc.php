@@ -17,7 +17,7 @@ function guestAuth($u, $p) {
     if (!isset($users[$u])) return false; // Guest account does not exist
     
     $expiry = isset($users[$u]['expiry']) ? $users[$u]['expiry'] : 0;
-    if ($expiry < time())
+    if ($expiry < time()) {
         return false; // Guest account is expired
     }    
 
