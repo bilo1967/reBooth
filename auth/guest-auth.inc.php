@@ -13,9 +13,13 @@ function guestAuth($u, $p) {
 
     $content = @file_get_contents($pwdfile);
     $users = ($content == false) ? array() : json_decode($content, true);
-    
 
-    if (!isset($users[$u])) return false;
+    if (!isset($users[$u])) return false; // Guest account does not exist
+    
+    $expiry = isset($users[$u]['expiry']) ? $users[$u]['expiry'] : 0;
+    if ($expiry < time())
+        return false; // Guest account is expired
+    }    
 
     return password_verify($p, $users[$u]['hash']) ? true : false;
 }
